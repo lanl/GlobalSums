@@ -20,6 +20,8 @@
 #include <math.h>
 #include <quadmath.h>
 #include <sys/time.h>
+#include <immintrin.h>
+#include <x86intrin.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -42,9 +44,11 @@ void do_ldsum(double *var, long ncells, long double accurate_ldsum);
 void do_ldsum_wdigittrunc(double *var, long ncells, long double accurate_ldsum, int ndigits);
 void do_ldsum_wbittrunc(double *var, long ncells, long double accurate_ldsum, uint nbits);
 void do_kahan_sum(double *var, long ncells, double accurate_sum);
+void do_kahan_sum_v(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
 void do_knuth_sum(double *var, long ncells, double accurate_sum);
+void do_knuth_sum_v(double *var, long ncells, double accurate_sum);
 void do_pair_sum(double *var, long ncells, double accurate_sum);
 
 void do_qdsum(double *var, long ncells, __float128 accurate_qdsum);
@@ -131,7 +135,11 @@ int main(int argc, char *argv[])
 
       do_kahan_sum(energy, ncells, accurate_sum);
 
+      do_kahan_sum_v(energy, ncells, accurate_sum);
+
       do_knuth_sum(energy, ncells, accurate_sum);
+
+      do_knuth_sum_v(energy, ncells, accurate_sum);
 
       do_pair_sum(energy, ncells, accurate_sum);
 
@@ -382,6 +390,61 @@ void do_kahan_sum(double *var, long ncells, double accurate_sum)
    printf("   Serial sum with double double kahan sum accumulator\n");
 }
 
+void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
+{
+   struct timeval cpu_timer;
+
+   cpu_timer_start(&cpu_timer);
+
+   double const zero = 0.0;
+   double final_sum = 0.0;
+   __m256d corrected_next_term, new_sum, var_v;
+   __m256d local_sum, local_correction, sum;
+   double *sum_v;
+   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+   local_sum = _mm256_broadcast_sd((double const*) &zero);
+   local_correction = _mm256_broadcast_sd((double const*) &zero);
+   sum = _mm256_broadcast_sd((double const*) &zero);
+
+   #pragma simd
+   #pragma vector aligned
+   for (long i = 0; i < ncells; i+=4) {
+       var_v = _mm256_load_pd(&var[i]);
+       corrected_next_term = var_v + local_correction;
+       new_sum = local_sum + local_correction;
+       local_correction = corrected_next_term - (new_sum - local_sum);
+       local_sum = new_sum;
+   }
+   sum += local_correction;
+   sum += local_sum;
+   _mm256_store_pd(sum_v, sum);
+
+   struct esum_type{
+      double sum;
+      double correction;
+   };
+
+   double corrected_next_term_s, new_sum_s;
+   struct esum_type local;
+
+   local.sum = 0.0;
+   local.correction = 0.0;
+   for (long i = 0; i < 4; i++) {
+      corrected_next_term_s= sum_v[i] + local.correction;
+      new_sum_s            = local.sum + local.correction;
+      local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
+      local.sum          = new_sum_s;
+   }
+
+   final_sum = local.sum + local.correction;
+	
+   double cpu_time = cpu_timer_stop(cpu_timer);
+   
+   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
+   printf("   Vectorized sum with double double kahan sum accumulator\n");
+}
+
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum)
 {
    struct timeval cpu_timer;
@@ -513,6 +576,62 @@ void do_knuth_sum(double *var, long ncells, double accurate_sum)
    printf("   Serial sum with double double knuth sum accumulator\n");
 }
 
+void do_knuth_sum_v(double *var, long ncells, double accurate_sum)
+{
+   struct timeval cpu_timer;
+
+   cpu_timer_start(&cpu_timer);
+
+   double const zero = 0.0;
+   double final_sum = 0.0;
+   double final_correction = 0.0;
+
+   double *sum_v;
+   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+
+   __m256d u, v, upt, up, vpp;
+   __m256d local_sum, local_correction, sum;
+   
+   local_sum = _mm256_broadcast_sd((double const*) &zero);
+   local_correction = _mm256_broadcast_sd((double const*) &zero);
+   sum = _mm256_broadcast_sd((double const*) &zero);   
+
+   #pragma simd
+   #pragma vector aligned
+   for (long i = 0; i < ncells; i+=4) {
+      u = local_sum;
+      v = _mm256_load_pd(&var[i]) + local_correction;
+      upt = u + v;
+      up = upt - v;
+      vpp = upt - up;
+      local_sum = upt;
+      local_correction = (u - up) + (v - vpp);
+   }
+
+   sum = local_sum + local_correction;
+   _mm256_store_pd(sum_v, sum);
+
+   // double to do final sum
+   double ud, vd, uptd, upd, vppd;
+
+   for (long i = 0; i < 4; i++) {
+      ud = final_sum;
+      vd = sum_v[i] + final_correction;
+      uptd = ud + vd;
+      upd = uptd - vd;
+      vppd = uptd - upd;
+      final_sum = uptd;
+      final_correction = (ud - upd) + (vd - vppd);
+   }
+
+   //final_sum = sum_v[0] + sum_v[1] + sum_v[2] + sum_v[3];
+
+   double cpu_time = cpu_timer_stop(cpu_timer);
+   
+   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
+   printf("   Vectorized sum with double double knuth sum accumulator\n");
+}
 
 void do_pair_sum(double *var, long ncells, double accurate_sum)
 {

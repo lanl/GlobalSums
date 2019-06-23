@@ -1,4 +1,4 @@
-CFLAGS=-fopenmp -std=c11 -g -O3 -ftree-vectorize
+CFLAGS=-fopenmp -std=c11 -g -O3 -ftree-vectorize -march=native -mtune=native
 #CFLAGS=-fopenmp -std=c11 -g -O3 -ftree-vectorize -fopt-info-missed 
 #CFLAGS=-fopenmp -std=c11 -g -Wall
 LDFLAGS=-fopenmp

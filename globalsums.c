@@ -45,6 +45,7 @@ void do_ldsum_wdigittrunc(double *var, long ncells, long double accurate_ldsum, 
 void do_ldsum_wbittrunc(double *var, long ncells, long double accurate_ldsum, uint nbits);
 void do_kahan_sum(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_v(double *var, long ncells, double accurate_sum);
+void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
 void do_knuth_sum(double *var, long ncells, double accurate_sum);
@@ -136,6 +137,8 @@ int main(int argc, char *argv[])
       do_kahan_sum(energy, ncells, accurate_sum);
 
       do_kahan_sum_v(energy, ncells, accurate_sum);
+
+      do_kahan_sum_gcc_v(energy, ncells, accurate_sum);
 
       do_knuth_sum(energy, ncells, accurate_sum);
 
@@ -443,6 +446,59 @@ void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
    printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
           accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
    printf("   Vectorized sum with double double kahan sum accumulator\n");
+}
+
+void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum)
+{
+   struct timeval cpu_timer;
+   typedef double vec4d __attribute__ ((vector_size(4 * sizeof(double))));
+
+   cpu_timer_start(&cpu_timer);
+
+   double const zero = 0.0;
+   double final_sum = 0.0;
+   vec4d corrected_next_term, new_sum, var_v;
+   double *sum_v;
+   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+   vec4d local_sum = {0.0};
+   vec4d local_correction = {0.0};
+   vec4d sum = {0.0};
+
+   for (long i = 0; i < ncells; i+=4) {
+       var_v = *(vec4d *)&var[i];
+       corrected_next_term = var_v + local_correction;
+       new_sum = local_sum + local_correction;
+       local_correction = corrected_next_term - (new_sum - local_sum);
+       local_sum = new_sum;
+   }
+   sum += local_correction;
+   sum += local_sum;
+   *(vec4d *)sum_v = sum;
+
+   struct esum_type{
+      double sum;
+      double correction;
+   };
+
+   double corrected_next_term_s, new_sum_s;
+   struct esum_type local;
+
+   local.sum = 0.0;
+   local.correction = 0.0;
+   for (long i = 0; i < 4; i++) {
+      corrected_next_term_s= sum_v[i] + local.correction;
+      new_sum_s            = local.sum + local.correction;
+      local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
+      local.sum          = new_sum_s;
+   }
+
+   final_sum = local.sum + local.correction;
+	
+   double cpu_time = cpu_timer_stop(cpu_timer);
+   
+   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
+   printf("   GCC Extensions Vectorized sum with double double kahan sum accumulator\n");
 }
 
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum)

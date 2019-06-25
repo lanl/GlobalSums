@@ -364,22 +364,18 @@ void do_ldsum_wbittrunc(double *var, long ncells, long double accurate_ldsum, ui
 void do_kahan_sum(double *var, long ncells, double accurate_sum)
 {
    struct timeval cpu_timer;
-
    cpu_timer_start(&cpu_timer);
 
    struct esum_type{
       double sum;
       double correction;
-   };
-
-   double corrected_next_term, new_sum;
-   struct esum_type local;
-
+   } local;
    local.sum = 0.0;
    local.correction = 0.0;
+
    for (long i = 0; i < ncells; i++) {
-      corrected_next_term= var[i] + local.correction;
-      new_sum            = local.sum + local.correction;
+      double corrected_next_term= var[i] + local.correction;
+      double new_sum            = local.sum + local.correction;
       local.correction   = corrected_next_term - (new_sum - local.sum);
       local.sum          = new_sum;
    }
@@ -396,52 +392,45 @@ void do_kahan_sum(double *var, long ncells, double accurate_sum)
 void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
 {
    struct timeval cpu_timer;
-
    cpu_timer_start(&cpu_timer);
 
    double const zero = 0.0;
-   double final_sum = 0.0;
-   __m256d corrected_next_term, new_sum, var_v;
-   __m256d local_sum, local_correction, sum;
-   double *sum_v;
-   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
-   local_sum = _mm256_broadcast_sd((double const*) &zero);
-   local_correction = _mm256_broadcast_sd((double const*) &zero);
-   sum = _mm256_broadcast_sd((double const*) &zero);
+   double *sum;
+   posix_memalign((void **)&sum, 64, sizeof(double)*4);
+   __m256d local_sum = _mm256_broadcast_sd((double const*) &zero);
+   __m256d local_correction = _mm256_broadcast_sd((double const*) &zero);
+   __m256d var_v;
 
    #pragma simd
    #pragma vector aligned
    for (long i = 0; i < ncells; i+=4) {
        var_v = _mm256_load_pd(&var[i]);
-       corrected_next_term = var_v + local_correction;
-       new_sum = local_sum + local_correction;
+       __m256d corrected_next_term = var_v + local_correction;
+       __m256d new_sum = local_sum + local_correction;
        local_correction = corrected_next_term - (new_sum - local_sum);
        local_sum = new_sum;
    }
-   sum += local_correction;
-   sum += local_sum;
-   _mm256_store_pd(sum_v, sum);
+   __m256d sum_v;
+   sum_v  = local_correction;
+   sum_v += local_sum;
+   _mm256_store_pd(sum, sum_v);
 
    struct esum_type{
       double sum;
       double correction;
-   };
-
-   double corrected_next_term_s, new_sum_s;
-   struct esum_type local;
-
+   } local;
    local.sum = 0.0;
    local.correction = 0.0;
+
    for (long i = 0; i < 4; i++) {
-      corrected_next_term_s= sum_v[i] + local.correction;
-      new_sum_s            = local.sum + local.correction;
+      double corrected_next_term_s = sum[i] + local.correction;
+      double new_sum_s             = local.sum + local.correction;
       local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
       local.sum          = new_sum_s;
    }
+   double final_sum = local.sum + local.correction;
 
-   final_sum = local.sum + local.correction;
-
-   free(sum_v);
+   free(sum);
 
    double cpu_time = cpu_timer_stop(cpu_timer);
    
@@ -457,44 +446,40 @@ void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum)
 
    typedef double vec4d __attribute__ ((vector_size(4 * sizeof(double))));
 
-   double final_sum = 0.0;
-   vec4d corrected_next_term, new_sum, var_v;
-   double *sum_v;
-   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
+   double *sum;
+   posix_memalign((void **)&sum, 64, sizeof(double)*4);
    vec4d local_sum = {0.0};
    vec4d local_correction = {0.0};
-   vec4d sum = {0.0};
+   vec4d var_v;
 
    for (long i = 0; i < ncells; i+=4) {
        var_v = *(vec4d *)&var[i];
-       corrected_next_term = var_v + local_correction;
-       new_sum = local_sum + local_correction;
+       vec4d corrected_next_term = var_v + local_correction;
+       vec4d new_sum = local_sum + local_correction;
        local_correction = corrected_next_term - (new_sum - local_sum);
        local_sum = new_sum;
    }
-   sum += local_correction;
-   sum += local_sum;
-   *(vec4d *)sum_v = sum;
+   vec4d sum_v;
+   sum_v  = local_correction;
+   sum_v += local_sum;
+   *(vec4d *)sum = sum_v;
 
    struct esum_type{
       double sum;
       double correction;
-   };
-
-   double corrected_next_term_s, new_sum_s;
-   struct esum_type local;
-
+   } local;
    local.sum = 0.0;
    local.correction = 0.0;
+
    for (long i = 0; i < 4; i++) {
-      corrected_next_term_s= sum_v[i] + local.correction;
-      new_sum_s            = local.sum + local.correction;
+      double corrected_next_term_s = sum[i] + local.correction;
+      double new_sum_s             = local.sum + local.correction;
       local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
       local.sum          = new_sum_s;
    }
-   final_sum = local.sum + local.correction;
+   double final_sum = local.sum + local.correction;
 
-   free(sum_v);
+   free(sum);
 
    double cpu_time = cpu_timer_stop(cpu_timer);
    

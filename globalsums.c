@@ -404,7 +404,7 @@ void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
    __m256d corrected_next_term, new_sum, var_v;
    __m256d local_sum, local_correction, sum;
    double *sum_v;
-   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
    local_sum = _mm256_broadcast_sd((double const*) &zero);
    local_correction = _mm256_broadcast_sd((double const*) &zero);
    sum = _mm256_broadcast_sd((double const*) &zero);
@@ -440,7 +440,9 @@ void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
    }
 
    final_sum = local.sum + local.correction;
-	
+
+   free(sum_v);
+
    double cpu_time = cpu_timer_stop(cpu_timer);
    
    printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
@@ -451,15 +453,14 @@ void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
 void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum)
 {
    struct timeval cpu_timer;
-   typedef double vec4d __attribute__ ((vector_size(4 * sizeof(double))));
-
    cpu_timer_start(&cpu_timer);
 
-   double const zero = 0.0;
+   typedef double vec4d __attribute__ ((vector_size(4 * sizeof(double))));
+
    double final_sum = 0.0;
    vec4d corrected_next_term, new_sum, var_v;
    double *sum_v;
-   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
    vec4d local_sum = {0.0};
    vec4d local_correction = {0.0};
    vec4d sum = {0.0};
@@ -491,9 +492,10 @@ void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum)
       local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
       local.sum          = new_sum_s;
    }
-
    final_sum = local.sum + local.correction;
-	
+
+   free(sum_v);
+
    double cpu_time = cpu_timer_stop(cpu_timer);
    
    printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
@@ -643,7 +645,7 @@ void do_knuth_sum_v(double *var, long ncells, double accurate_sum)
    double final_correction = 0.0;
 
    double *sum_v;
-   sum_v = (double *) aligned_alloc(64, sizeof(double)*4);
+   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
 
    __m256d u, v, upt, up, vpp;
    __m256d local_sum, local_correction, sum;
@@ -680,7 +682,7 @@ void do_knuth_sum_v(double *var, long ncells, double accurate_sum)
       final_correction = (ud - upd) + (vd - vppd);
    }
 
-   //final_sum = sum_v[0] + sum_v[1] + sum_v[2] + sum_v[3];
+   free(sum_v);
 
    double cpu_time = cpu_timer_stop(cpu_timer);
    

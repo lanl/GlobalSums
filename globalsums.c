@@ -44,20 +44,20 @@ long double do_ldsum_wbittrunc(double* restrict var, long ncells, uint nbits);
 double do_kahan_sum(double* restrict var, long ncells);
 double do_kahan_sum_v(double* restrict var, long ncells);
 double do_kahan_sum_gcc_v(double* restrict var, long ncells);
+double do_kahan_sum_agner_v(double *var, long ncells);
 double do_knuth_sum(double* restrict var, long ncells);
 double do_knuth_sum_v(double* restrict var, long ncells);
+double do_pair_sum(double* restrict var, long ncells);
 
-void do_kahan_sum_omp(double *var, long ncells, double accurate_sum);
-void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
-void do_pair_sum(double *var, long ncells, double accurate_sum);
+__float128 do_qdsum(double* restrict var, long ncells);
+__float128 do_qdsum_wtrunc(double* restrict var, long ncells, int ndigits);
+__float128 do_full_qdsum(__float128* restrict var, long ncells);
+__float128 do_full_qdsum_wtrunc(__float128* restrict var, long ncells, int ndigits);
 
-void do_sum_omp(double *var, long ncells, double accurate_sum);
-void do_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
-
-void do_qdsum(double *var, long ncells, __float128 accurate_qdsum);
-void do_qdsum_wtrunc(double *var, long ncells, __float128 accurate_qdsum, int ndigits);
-void do_full_qdsum(__float128 *var, long ncells, __float128 accurate_qdsum);
-void do_full_qdsum_wtrunc(__float128 *var, long ncells, __float128 accurate_qdsum, int ndigits);
+double do_sum_omp(double* restrict var, long ncells);
+double do_sum_omp_wbittrunc(double* restrict var, long ncells, uint nbits);
+double do_kahan_sum_omp(double* restrict var, long ncells);
+double do_kahan_sum_omp_wbittrunc(double* restrict var, long ncells, int nbits);
 
 void cpu_timer_start(struct timeval *tstart_cpu);
 double cpu_timer_stop(struct timeval tstart_cpu);
@@ -124,8 +124,12 @@ int main(int argc, char *argv[])
 
       double test_sum, test_accurate_sum;
       long double test_ldsum, test_accurate_ldsum;
+      __float128 test_qdsum, test_accurate_qdsum;
       struct timeval cpu_timer;
       double cpu_time;
+      char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
+      int n;
+      __float128 mult;
 
 //******************************************************
 
@@ -237,6 +241,18 @@ int main(int argc, char *argv[])
 
       cpu_timer_start(&cpu_timer);
 
+      test_sum = do_kahan_sum_agner_v(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Agner C++ vector class sum with double double kahan sum accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
       test_sum = do_knuth_sum(energy, ncells);
 
       cpu_time = cpu_timer_stop(cpu_timer);
@@ -257,7 +273,14 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-      do_pair_sum(energy, ncells, accurate_sum);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_pair_sum(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,test_sum-accurate_sum,(test_sum-accurate_sum)/accurate_sum, cpu_time);
+      printf("   Pair-wise sum\n");
 
 //******************************************************
 
@@ -265,11 +288,41 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-      do_qdsum(energy, ncells, accurate_qdsum);
+      cpu_timer_start(&cpu_timer);
+
+      test_qdsum = do_qdsum(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+   
+      quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
+      quadmath_snprintf(quadstring2,24,"%-25.24Qg",test_qdsum);
+      quadmath_snprintf(quadstring3,24,"%-20.14Qg",test_qdsum-accurate_qdsum);
+      quadmath_snprintf(quadstring4,24,"%-20.14Qg",(test_qdsum-accurate_qdsum)/accurate_qdsum);
+      printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
+             quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
+      printf("   Serial sum with quad double accumulator\n");
 
 //******************************************************
 
-//    do_qdsum_wtrunc(energy, ncells, accurate_qdsum, 17);
+#ifdef XXX
+      cpu_timer_start(&cpu_timer);
+
+      test_qdsum = do_qdsum_wtrunc(energy, ncells, 17);
+
+      n = (int)log10((double)test_qdsum);
+      mult = pow((double)10.0,(double)(ndigits-n));
+      test_accurate_qdsum = round(accurate_qdsum*mult)/mult;
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+   
+      quadmath_snprintf(quadstring1,24,"%-25.24Qg",test_accurate_qdsum);
+      quadmath_snprintf(quadstring2,24,"%-25.24Qg",test_qdsum);
+      quadmath_snprintf(quadstring3,24,"%-20.14Qg",test_qdsum-test_accurate_qdsum);
+      quadmath_snprintf(quadstring4,24,"%-20.14Qg",(test_qdsum-test_accurate_qdsum)/test_accurate_qdsum);
+      printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
+             quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
+      printf("   Serial sum with quad double accumulator with truncation\n");
+#endif
 
 //******************************************************
 
@@ -283,11 +336,41 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-      do_full_qdsum(energyq, ncells, accurate_qdsum);
+      cpu_timer_start(&cpu_timer);
+
+      test_qdsum = do_full_qdsum(energyq, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+   
+      quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
+      quadmath_snprintf(quadstring2,24,"%-25.24Qg",test_qdsum);
+      quadmath_snprintf(quadstring3,24,"%-20.14Qg",test_qdsum-accurate_qdsum);
+      quadmath_snprintf(quadstring4,24,"%-20.14Qg",(test_qdsum-accurate_qdsum)/accurate_qdsum);
+      printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
+             quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
+      printf("   Serial sum with quad double accumulator and quad terms\n");
 
 //******************************************************
 
-//    do_full_qdsum_wtrunc(energyq, ncells, accurate_qdsum, 28);
+#ifdef XXX
+      cpu_timer_start(&cpu_timer);
+
+      test_qdsum = do_full_qdsum_wtrunc(energyq, ncells, 28);
+
+      n = (int)log10((double)test_qdsum);
+      mult = pow((double)10.0,(double)(ndigits-n));
+      test_accurate_qdsum = round(accurate_qdsum*mult)/mult;
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+   
+      quadmath_snprintf(quadstring1,24,"%-25.24Qg",test_accurate_qdsum);
+      quadmath_snprintf(quadstring2,24,"%-25.24Qg",test_qdsum);
+      quadmath_snprintf(quadstring3,24,"%-20.14Qg",test_qdsum-test_accurate_qdsum);
+      quadmath_snprintf(quadstring4,24,"%-20.14Qg",(test_qdsum-test_accurate_qdsum)/test_accurate_qdsum);
+      printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
+             quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
+      printf("   Serial sum with quad double accumulator and quad terms with truncation\n");
+#endif
 
 //******************************************************
 
@@ -305,19 +388,52 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-      do_sum_omp(energy, ncells, accurate_sum);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_sum_omp(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,test_sum-accurate_sum,(test_sum-accurate_sum)/accurate_sum, cpu_time);
+      printf("   OpenMP sum\n");
 
 //******************************************************
 
-      do_sum_omp_wbittrunc(energy, ncells, accurate_sum, nbitsomp);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_sum_omp_wbittrunc(energy, ncells, nbitsomp);
+
+      test_accurate_sum = bittruncate(accurate_sum, nbitsomp);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             test_accurate_sum,test_sum,test_sum-test_accurate_sum,(test_sum-test_accurate_sum)/test_accurate_sum, cpu_time);
+      printf("   OpenMP sum with bit truncation\n");
 
 //******************************************************
 
-      do_kahan_sum_omp(energy, ncells, accurate_sum);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_kahan_sum_omp(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   OpenMP sum with double double kahan sum accumulator\n");
 
 //******************************************************
 
-      do_kahan_sum_omp_wbittrunc(energy, ncells, accurate_sum, nbitskahan);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_kahan_sum_omp_wbittrunc(energy, ncells, nbitskahan);
+
+      test_accurate_sum = bittruncate(accurate_sum, nbitskahan);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             test_accurate_sum,test_sum,(test_sum-test_accurate_sum),((test_sum-test_accurate_sum)/test_accurate_sum), cpu_time);
+      printf("   OpenMP sum with double double kahan sum accumulator with bit truncation\n");
 
 //******************************************************
 
@@ -325,290 +441,6 @@ int main(int argc, char *argv[])
 
       printf("\n");
    }
-}
-
-   
-void do_sum_omp(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum
-   double sum = 0.0;
-#pragma omp parallel for reduction(+: sum)
-   for (long i = 0; i < ncells; i++){
-      sum += var[i];
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   OpenMP sum\n");
-}
-
-void do_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum
-   double sum = 0.0;
-#pragma omp parallel for reduction(+: sum)
-   for (long i = 0; i < ncells; i++){
-      sum += var[i];
-   }
-
-   sum = bittruncate(sum, nbits);
-   accurate_sum = bittruncate(accurate_sum, nbits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   OpenMP sum with bit truncation\n");
-}
-
-void do_kahan_sum_omp(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   struct esum_type{
-      double sum;
-      double correction;
-   };
-
-   double sum = 0.0;
-
-#pragma omp parallel reduction(+:sum)
-   {
-      double corrected_next_term, new_sum;
-      struct esum_type local;
-
-      local.sum = 0.0;
-      local.correction = 0.0;
-#pragma omp for
-      for (long i = 0; i < ncells; i++) {
-         corrected_next_term= var[i] + local.correction;
-         new_sum      = local.sum + local.correction;
-         local.correction   = corrected_next_term - (new_sum - local.sum);
-         local.sum          = new_sum;
-      }
-
-      sum += local.correction;
-#pragma omp barrier
-      sum += local.sum;
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,(sum-accurate_sum),((sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   OpenMP sum with double double kahan sum accumulator\n");
-}
-
-void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   struct esum_type{
-      double sum;
-      double correction;
-   };
-
-   double sum = 0.0;
-   double correction = 0.0;
-
-#pragma omp parallel reduction(+:sum, correction)
-   {
-      double corrected_next_term, new_sum;
-      struct esum_type local;
-
-      local.sum = 0.0;
-      local.correction = 0.0;
-#pragma omp for
-      for (long i = 0; i < ncells; i++) {
-         corrected_next_term= var[i] + local.correction;
-         new_sum      = local.sum + local.correction;
-         local.correction   = corrected_next_term - (new_sum - local.sum);
-         local.sum          = new_sum;
-      }
-
-//    sum += local.correction;
-//    sum += local.sum;
-         correction = local.correction;
-         corrected_next_term = sum + correction;
-         new_sum = sum + correction;
-         correction = corrected_next_term - (new_sum - sum);
-         sum = new_sum;
-#ifdef _OPENMP
-#pragma omp barrier
-#endif
-         correction = local.sum;
-         corrected_next_term = sum + correction;
-         new_sum = sum + correction;
-         correction = corrected_next_term - (new_sum - sum);
-         sum = new_sum;
-   }
-
-   sum = bittruncate(sum, nbits);
-   accurate_sum = bittruncate(accurate_sum, nbits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,(sum-accurate_sum),((sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   OpenMP sum with double double kahan sum accumulator with bit truncation\n");
-}
-
-void do_pair_sum(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Pair-wise sum
-   double *pwsum = (double *)malloc(ncells/2*sizeof(double));
-
-   long nmax = ncells/2;
-   for (long i = 0; i<nmax; i++){
-      pwsum[i] = var[i*2]+var[i*2+1];
-   }
-
-   for (long j = 1; j<log2(ncells); j++){
-      nmax /= 2;
-      for (long i = 0; i<nmax; i++){
-         pwsum[i] = pwsum[i*2]+pwsum[i*2+1];
-      }
-   }
-   double sum = pwsum[0];
-
-   free(pwsum);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   Pair-wise sum\n");
-
-}
-
-void do_qdsum(double *var, long ncells, __float128 accurate_qdsum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
-
-   // Serial sum with quad doubles
-   __float128 qdsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      qdsum += (__float128)var[i];
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
-   quadmath_snprintf(quadstring2,24,"%-25.24Qg",qdsum);
-   quadmath_snprintf(quadstring3,24,"%-20.14Qg",qdsum-accurate_qdsum);
-   quadmath_snprintf(quadstring4,24,"%-20.14Qg",(qdsum-accurate_qdsum)/accurate_qdsum);
-   printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
-          quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
-   printf("   Serial sum with quad double accumulator\n");
-}
-
-void do_qdsum_wtrunc(double *var, long ncells, __float128 accurate_qdsum, int ndigits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
-
-   // Serial sum with quad doubles
-   __float128 qdsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      qdsum += (__float128)var[i];
-   }
-
-   int n = (int)log10((double)qdsum);
-   __float128 mult = pow((double)10.0,(double)(ndigits-n));
-
-   qdsum = round(qdsum*mult)/mult;
-   accurate_qdsum = round(accurate_qdsum*mult)/mult;
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
-   quadmath_snprintf(quadstring2,24,"%-25.24Qg",qdsum);
-   quadmath_snprintf(quadstring3,24,"%-20.14Qg",qdsum-accurate_qdsum);
-   quadmath_snprintf(quadstring4,24,"%-20.14Qg",(qdsum-accurate_qdsum)/accurate_qdsum);
-   printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
-          quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
-   printf("   Serial sum with quad double accumulator with truncation\n");
-}
-
-void do_full_qdsum(__float128 *varq, long ncells, __float128 accurate_qdsum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
-
-   // Serial sum with quad doubles
-   __float128 qdsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      qdsum += (__float128)varq[i];
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
-   quadmath_snprintf(quadstring2,24,"%-25.24Qg",qdsum);
-   quadmath_snprintf(quadstring3,24,"%-20.14Qg",qdsum-accurate_qdsum);
-   quadmath_snprintf(quadstring4,24,"%-20.14Qg",(qdsum-accurate_qdsum)/accurate_qdsum);
-   printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
-          quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
-   printf("   Serial sum with quad double accumulator and quad terms\n");
-}
-
-void do_full_qdsum_wtrunc(__float128 *varq, long ncells, __float128 accurate_qdsum, int ndigits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
-
-   // Serial sum with quad doubles
-   __float128 qdsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      qdsum += (__float128)varq[i];
-   }
-
-   int n = (int)log10((double)qdsum);
-   __float128 mult = pow((double)10.0,ndigits-n);
-
-   qdsum = round(qdsum*mult)/mult;
-   accurate_qdsum = round(accurate_qdsum*mult)/mult;
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   quadmath_snprintf(quadstring1,24,"%-25.24Qg",accurate_qdsum);
-   quadmath_snprintf(quadstring2,24,"%-25.24Qg",qdsum);
-   quadmath_snprintf(quadstring3,24,"%-20.14Qg",qdsum-accurate_qdsum);
-   quadmath_snprintf(quadstring4,24,"%-20.14Qg",(qdsum-accurate_qdsum)/accurate_qdsum);
-   printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
-          quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
-   printf("   Serial sum with quad double accumulator and quad terms with truncation\n");
 }
 
 void cpu_timer_start(struct timeval *tstart_cpu){

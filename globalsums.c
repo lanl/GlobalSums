@@ -35,22 +35,24 @@
 
 typedef unsigned int uint;
 
-void do_sum(double *var, long ncells, double accurate_sum);
-void do_sum_omp(double *var, long ncells, double accurate_sum);
-void do_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
-void do_sum_wdigittrunc(double *var, long ncells, double accurate_sum, int ndigits);
-void do_sum_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
-void do_ldsum(double *var, long ncells, long double accurate_ldsum);
-void do_ldsum_wdigittrunc(double *var, long ncells, long double accurate_ldsum, int ndigits);
-void do_ldsum_wbittrunc(double *var, long ncells, long double accurate_ldsum, uint nbits);
-void do_kahan_sum(double *var, long ncells, double accurate_sum);
-void do_kahan_sum_v(double *var, long ncells, double accurate_sum);
-void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum);
+double do_sum(double* restrict var, long ncells);
+double do_sum_wdigittrunc(double* restrict var, long ncells, int ndigits);
+double do_sum_wbittrunc(double* restrict var, long ncells, uint nbits);
+long double do_ldsum(double* restrict var, long ncells);
+long double do_ldsum_wdigittrunc(double* restrict var, long ncells, int ndigits);
+long double do_ldsum_wbittrunc(double* restrict var, long ncells, uint nbits);
+double do_kahan_sum(double* restrict var, long ncells);
+double do_kahan_sum_v(double* restrict var, long ncells);
+double do_kahan_sum_gcc_v(double* restrict var, long ncells);
+double do_knuth_sum(double* restrict var, long ncells);
+double do_knuth_sum_v(double* restrict var, long ncells);
+
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum);
 void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
-void do_knuth_sum(double *var, long ncells, double accurate_sum);
-void do_knuth_sum_v(double *var, long ncells, double accurate_sum);
 void do_pair_sum(double *var, long ncells, double accurate_sum);
+
+void do_sum_omp(double *var, long ncells, double accurate_sum);
+void do_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits);
 
 void do_qdsum(double *var, long ncells, __float128 accurate_qdsum);
 void do_qdsum_wtrunc(double *var, long ncells, __float128 accurate_qdsum, int ndigits);
@@ -120,37 +122,156 @@ int main(int argc, char *argv[])
          energy[i] = (i < ncellsdiv2) ? high_value : low_value;
       }
 
-      do_sum(energy, ncells, accurate_sum);
+      double test_sum, test_accurate_sum;
+      long double test_ldsum, test_accurate_ldsum;
+      struct timeval cpu_timer;
+      double cpu_time;
 
-      //do_sum_wdigittrunc(energy, ncells, accurate_sum, 9);
-      do_sum_wdigittrunc(energy, ncells, accurate_sum, ndigits);
+//******************************************************
 
-      do_sum_wbittrunc(energy, ncells, accurate_sum, nbits);
+      cpu_timer_start(&cpu_timer);
 
-      do_ldsum(energy, ncells, accurate_ldsum);
+      test_sum = do_sum(energy, ncells);
 
-      //do_ldsum_wdigittrunc(energy, ncells, accurate_ldsum, 6);
-      do_ldsum_wdigittrunc(energy, ncells, accurate_ldsum, ndigitsld);
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,test_sum-accurate_sum,(test_sum-accurate_sum)/accurate_sum, cpu_time);
+      printf("   Serial sum\n");
 
-      do_ldsum_wbittrunc(energy, ncells, accurate_ldsum, nbitsld);
+//******************************************************
 
-      do_kahan_sum(energy, ncells, accurate_sum);
+      cpu_timer_start(&cpu_timer);
 
-      do_kahan_sum_v(energy, ncells, accurate_sum);
+      test_sum = do_sum_wdigittrunc(energy, ncells, ndigits);
 
-      do_kahan_sum_gcc_v(energy, ncells, accurate_sum);
+      cpu_time = cpu_timer_stop(cpu_timer);
+      test_accurate_sum = digitround(accurate_sum, ndigits);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             test_accurate_sum,test_sum,test_sum-test_accurate_sum,(test_sum-test_accurate_sum)/test_accurate_sum, cpu_time);
+      printf("   Serial sum with digit truncation\n");
 
-      do_knuth_sum(energy, ncells, accurate_sum);
+//******************************************************
 
-      do_knuth_sum_v(energy, ncells, accurate_sum);
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_sum_wbittrunc(energy, ncells, nbits);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+
+      test_accurate_sum = bittruncate(accurate_sum, nbits);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             test_accurate_sum,test_sum,test_sum-test_accurate_sum,(test_sum-test_accurate_sum)/test_accurate_sum, cpu_time);
+      printf("   Serial sum with bit truncation\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_ldsum = do_ldsum(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             (double)accurate_ldsum,(double)test_ldsum,(double)(test_ldsum-accurate_ldsum),(double)((test_ldsum-accurate_ldsum)/accurate_ldsum), cpu_time);
+      printf("   Serial sum with long double accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_ldsum = do_ldsum_wdigittrunc(energy, ncells, ndigitsld);
+
+      test_accurate_ldsum = digitround(accurate_ldsum, ndigitsld);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             (double)test_accurate_ldsum,(double)test_ldsum,(double)(test_ldsum-test_accurate_ldsum),(double)((test_ldsum-test_accurate_ldsum)/test_accurate_ldsum), cpu_time);
+      printf("   Serial sum with long double accumulator with ndigit truncation\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_ldsum = do_ldsum_wbittrunc(energy, ncells, nbitsld);
+
+      test_accurate_ldsum = bittruncate(accurate_ldsum, nbitsld);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             (double)test_accurate_ldsum,(double)test_ldsum,(double)(test_ldsum-test_accurate_ldsum),(double)((test_ldsum-test_accurate_ldsum)/test_accurate_ldsum), cpu_time);
+      printf("   Serial sum with long double accumulator with bit truncation\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_kahan_sum(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Serial sum with double double kahan sum accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_kahan_sum_v(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+          accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Vectorized sum with double double kahan sum accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_kahan_sum_gcc_v(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   GCC Extensions Vectorized sum with double double kahan sum accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_knuth_sum(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Serial sum with double double knuth sum accumulator\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
+      test_sum = do_knuth_sum_v(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Vectorized sum with double double knuth sum accumulator\n");
+
+//******************************************************
 
       do_pair_sum(energy, ncells, accurate_sum);
 
+//******************************************************
+
       printf("\n");
+
+//******************************************************
 
       do_qdsum(energy, ncells, accurate_qdsum);
 
+//******************************************************
+
 //    do_qdsum_wtrunc(energy, ncells, accurate_qdsum, 17);
+
+//******************************************************
 
       free(energy);
 
@@ -160,9 +281,15 @@ int main(int argc, char *argv[])
          energyq[i] = (i < ncellsdiv2) ? high_valueq : low_valueq;
       }
 
+//******************************************************
+
       do_full_qdsum(energyq, ncells, accurate_qdsum);
 
+//******************************************************
+
 //    do_full_qdsum_wtrunc(energyq, ncells, accurate_qdsum, 28);
+
+//******************************************************
 
       free(energyq);
 
@@ -176,13 +303,23 @@ int main(int argc, char *argv[])
          energy[i] = (i < ncellsdiv2) ? high_value : low_value;
       }
 
+//******************************************************
+
       do_sum_omp(energy, ncells, accurate_sum);
+
+//******************************************************
 
       do_sum_omp_wbittrunc(energy, ncells, accurate_sum, nbitsomp);
 
+//******************************************************
+
       do_kahan_sum_omp(energy, ncells, accurate_sum);
 
+//******************************************************
+
       do_kahan_sum_omp_wbittrunc(energy, ncells, accurate_sum, nbitskahan);
+
+//******************************************************
 
       free(energy);
 
@@ -191,25 +328,6 @@ int main(int argc, char *argv[])
 }
 
    
-void do_sum(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum
-   double sum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      sum += var[i];
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   Serial sum\n");
-}
-
 void do_sum_omp(double *var, long ncells, double accurate_sum)
 {
    struct timeval cpu_timer;
@@ -251,241 +369,6 @@ void do_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, uint nb
    printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
           accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
    printf("   OpenMP sum with bit truncation\n");
-}
-
-void do_sum_wdigittrunc(double *var, long ncells, double accurate_sum, int ndigits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum
-   double sum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      sum += var[i];
-   }
-
-   sum = digitround(sum, ndigits);
-   accurate_sum = digitround(accurate_sum, ndigits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   Serial sum with digit truncation\n");
-}
-
-void do_sum_wbittrunc(double *var, long ncells, double accurate_sum, uint nbits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum
-   double sum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      sum += var[i];
-   }
-
-   sum = bittruncate(sum, nbits);
-   accurate_sum = bittruncate(accurate_sum, nbits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,sum-accurate_sum,(sum-accurate_sum)/accurate_sum, cpu_time);
-   printf("   Serial sum with bit truncation\n");
-}
-
-
-void do_ldsum(double *var, long ncells, long double accurate_ldsum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum with long doubles
-   long double ldsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      ldsum += var[i];
-   }
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          (double)accurate_ldsum,(double)ldsum,(double)(ldsum-accurate_ldsum),(double)((ldsum-accurate_ldsum)/accurate_ldsum), cpu_time);
-   printf("   Serial sum with long double accumulator\n");
-}
-
-void do_ldsum_wdigittrunc(double *var, long ncells, long double accurate_ldsum, int ndigits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum with long doubles
-   long double ldsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      ldsum += var[i];
-   }
-
-   ldsum = digitround(ldsum, ndigits);
-   accurate_ldsum = digitround(accurate_ldsum, ndigits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          (double)accurate_ldsum,(double)ldsum,(double)(ldsum-accurate_ldsum),(double)((ldsum-accurate_ldsum)/accurate_ldsum), cpu_time);
-   printf("   Serial sum with long double accumulator with ndigit truncation\n");
-}
-
-void do_ldsum_wbittrunc(double *var, long ncells, long double accurate_ldsum, uint nbits)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   // Serial sum with long doubles
-   long double ldsum = 0.0;
-   for (long i = 0; i < ncells; i++){
-      ldsum += var[i];
-   }
-
-   ldsum = bittruncate(ldsum, nbits);
-   accurate_ldsum = bittruncate(accurate_ldsum, nbits);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          (double)accurate_ldsum,(double)ldsum,(double)(ldsum-accurate_ldsum),(double)((ldsum-accurate_ldsum)/accurate_ldsum), cpu_time);
-   printf("   Serial sum with long double accumulator with bit truncation\n");
-}
-
-void do_kahan_sum(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-   cpu_timer_start(&cpu_timer);
-
-   struct esum_type{
-      double sum;
-      double correction;
-   } local;
-   local.sum = 0.0;
-   local.correction = 0.0;
-
-   for (long i = 0; i < ncells; i++) {
-      double corrected_next_term= var[i] + local.correction;
-      double new_sum            = local.sum + local.correction;
-      local.correction   = corrected_next_term - (new_sum - local.sum);
-      local.sum          = new_sum;
-   }
-
-   double sum = local.sum + local.correction;
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,(sum-accurate_sum),((sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   Serial sum with double double kahan sum accumulator\n");
-}
-
-void do_kahan_sum_v(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-   cpu_timer_start(&cpu_timer);
-
-   double const zero = 0.0;
-   double *sum;
-   posix_memalign((void **)&sum, 64, sizeof(double)*4);
-   __m256d local_sum = _mm256_broadcast_sd((double const*) &zero);
-   __m256d local_correction = _mm256_broadcast_sd((double const*) &zero);
-   __m256d var_v;
-
-   #pragma simd
-   #pragma vector aligned
-   for (long i = 0; i < ncells; i+=4) {
-       var_v = _mm256_load_pd(&var[i]);
-       __m256d corrected_next_term = var_v + local_correction;
-       __m256d new_sum = local_sum + local_correction;
-       local_correction = corrected_next_term - (new_sum - local_sum);
-       local_sum = new_sum;
-   }
-   __m256d sum_v;
-   sum_v  = local_correction;
-   sum_v += local_sum;
-   _mm256_store_pd(sum, sum_v);
-
-   struct esum_type{
-      double sum;
-      double correction;
-   } local;
-   local.sum = 0.0;
-   local.correction = 0.0;
-
-   for (long i = 0; i < 4; i++) {
-      double corrected_next_term_s = sum[i] + local.correction;
-      double new_sum_s             = local.sum + local.correction;
-      local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
-      local.sum          = new_sum_s;
-   }
-   double final_sum = local.sum + local.correction;
-
-   free(sum);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   Vectorized sum with double double kahan sum accumulator\n");
-}
-
-void do_kahan_sum_gcc_v(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-   cpu_timer_start(&cpu_timer);
-
-   typedef double vec4d __attribute__ ((vector_size(4 * sizeof(double))));
-
-   double *sum;
-   posix_memalign((void **)&sum, 64, sizeof(double)*4);
-   vec4d local_sum = {0.0};
-   vec4d local_correction = {0.0};
-   vec4d var_v;
-
-   for (long i = 0; i < ncells; i+=4) {
-       var_v = *(vec4d *)&var[i];
-       vec4d corrected_next_term = var_v + local_correction;
-       vec4d new_sum = local_sum + local_correction;
-       local_correction = corrected_next_term - (new_sum - local_sum);
-       local_sum = new_sum;
-   }
-   vec4d sum_v;
-   sum_v  = local_correction;
-   sum_v += local_sum;
-   *(vec4d *)sum = sum_v;
-
-   struct esum_type{
-      double sum;
-      double correction;
-   } local;
-   local.sum = 0.0;
-   local.correction = 0.0;
-
-   for (long i = 0; i < 4; i++) {
-      double corrected_next_term_s = sum[i] + local.correction;
-      double new_sum_s             = local.sum + local.correction;
-      local.correction   = corrected_next_term_s - (new_sum_s - local.sum);
-      local.sum          = new_sum_s;
-   }
-   double final_sum = local.sum + local.correction;
-
-   free(sum);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   GCC Extensions Vectorized sum with double double kahan sum accumulator\n");
 }
 
 void do_kahan_sum_omp(double *var, long ncells, double accurate_sum)
@@ -582,98 +465,6 @@ void do_kahan_sum_omp_wbittrunc(double *var, long ncells, double accurate_sum, u
    printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
           accurate_sum,sum,(sum-accurate_sum),((sum-accurate_sum)/accurate_sum), cpu_time);
    printf("   OpenMP sum with double double kahan sum accumulator with bit truncation\n");
-}
-
-void do_knuth_sum(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   struct esum_type{
-      double sum;
-      double correction;
-   };
-
-  double u, v, upt, up, vpp;
-  struct esum_type local;
-
-  local.sum = 0.0;
-  local.correction = 0.0;
-  for (long i = 0; i < ncells; i++) {
-     u = local.sum;
-     v = var[i] + local.correction;
-     upt = u + v;
-     up = upt - v;
-     vpp = upt - up;
-     local.sum = upt;
-     local.correction = (u - up) + (v - vpp);
-  }
-
-   double sum = local.sum + local.correction;
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,sum,(sum-accurate_sum),((sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   Serial sum with double double knuth sum accumulator\n");
-}
-
-void do_knuth_sum_v(double *var, long ncells, double accurate_sum)
-{
-   struct timeval cpu_timer;
-
-   cpu_timer_start(&cpu_timer);
-
-   double const zero = 0.0;
-   double final_sum = 0.0;
-   double final_correction = 0.0;
-
-   double *sum_v;
-   posix_memalign((void **)&sum_v, 64, sizeof(double)*4);
-
-   __m256d u, v, upt, up, vpp;
-   __m256d local_sum, local_correction, sum;
-   
-   local_sum = _mm256_broadcast_sd((double const*) &zero);
-   local_correction = _mm256_broadcast_sd((double const*) &zero);
-   sum = _mm256_broadcast_sd((double const*) &zero);   
-
-   #pragma simd
-   #pragma vector aligned
-   for (long i = 0; i < ncells; i+=4) {
-      u = local_sum;
-      v = _mm256_load_pd(&var[i]) + local_correction;
-      upt = u + v;
-      up = upt - v;
-      vpp = upt - up;
-      local_sum = upt;
-      local_correction = (u - up) + (v - vpp);
-   }
-
-   sum = local_sum + local_correction;
-   _mm256_store_pd(sum_v, sum);
-
-   // double to do final sum
-   double ud, vd, uptd, upd, vppd;
-
-   for (long i = 0; i < 4; i++) {
-      ud = final_sum;
-      vd = sum_v[i] + final_correction;
-      uptd = ud + vd;
-      upd = uptd - vd;
-      vppd = uptd - upd;
-      final_sum = uptd;
-      final_correction = (ud - upd) + (vd - vppd);
-   }
-
-   free(sum_v);
-
-   double cpu_time = cpu_timer_stop(cpu_timer);
-   
-   printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
-          accurate_sum,final_sum,(final_sum-accurate_sum),((final_sum-accurate_sum)/accurate_sum), cpu_time);
-   printf("   Vectorized sum with double double knuth sum accumulator\n");
 }
 
 void do_pair_sum(double *var, long ncells, double accurate_sum)

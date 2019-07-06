@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <quadmath.h>
-#include <sys/time.h>
+#include <time.h>
 #include <immintrin.h>
 #include <x86intrin.h>
 

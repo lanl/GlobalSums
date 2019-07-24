@@ -54,6 +54,16 @@ endif()
 
 find_package(OpenMP)
 
+try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/test.c")
+
+if(HAVE_AVX512)
+    message("-- Detecting AVX512 hardware -- found")
+    add_definitions(-DHAVE_AVX512)
+else()
+    message("-- Detecting AVX512 hardware -- not present")
+endif()
+
+
 # Adds build target of globalsums with source code files
 add_executable(globalsums globalsums.c do_full_qdsum.c do_full_qdsum_wtrunc.c do_kahan_sum.c do_kahan_sum_gcc_v.c
                do_kahan_sum_omp.c do_kahan_sum_omp_wbittrunc.c do_kahan_sum_v.c do_knuth_sum.c do_knuth_sum_v.c

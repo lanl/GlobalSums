@@ -68,7 +68,9 @@ add_executable(globalsums globalsums.c do_full_qdsum.c do_full_qdsum_wtrunc.c do
                do_kahan_sum_omp.c do_kahan_sum_omp_wbittrunc.c do_kahan_sum_v.c do_knuth_sum.c do_knuth_sum_v.c
                do_ldsum.c do_ldsum_wbittrunc.c do_ldsum_wdigittrunc.c do_pair_sum.c do_qdsum.c do_qdsum_wtrunc.c
                do_sum.c do_sum_omp.c do_sum_omp_wbittrunc.c do_sum_wbittrunc.c do_sum_wdigittrunc.c
-               kahan_fog_vector.cpp kahan_fog_vector8.cpp kahan_gcc_vector8.c kahan_gcc_vector8.c kahan_intel_vector8.c)
+               kahan_fog_vector.cpp kahan_fog_vector8.cpp kahan_gcc_vector8.c kahan_gcc_vector8.c
+               kahan_intel_vector8.c knuth_gcc_vector8.c knuth_gcc_vector.c knuth_fog_vector.cpp knuth_gcc_vector8.c
+               knuth_intel_vector8.c knuth_fog_vector8.cpp)
 
 target_include_directories(globalsums PRIVATE vectorclass)
 if(OPENMP_FOUND)

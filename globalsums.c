@@ -20,8 +20,6 @@
 #include <math.h>
 #include <quadmath.h>
 #include <time.h>
-#include <immintrin.h>
-#include <x86intrin.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -35,6 +33,7 @@
 
 typedef unsigned int uint;
 
+double do_sum_novec(double *var, long ncells);
 double do_sum(double* restrict var, long ncells);
 double do_sum_wdigittrunc(double* restrict var, long ncells, int ndigits);
 double do_sum_wbittrunc(double* restrict var, long ncells, uint nbits);
@@ -146,12 +145,24 @@ int main(int argc, char *argv[])
 
       cpu_timer_start(&cpu_timer);
 
+      test_sum = do_sum_novec(energy, ncells);
+
+      cpu_time = cpu_timer_stop(cpu_timer);
+   
+      printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
+             accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
+      printf("   Serial sum\n");
+
+//******************************************************
+
+      cpu_timer_start(&cpu_timer);
+
       test_sum = do_sum(energy, ncells);
 
       cpu_time = cpu_timer_stop(cpu_timer);
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,test_sum-accurate_sum,(test_sum-accurate_sum)/accurate_sum, cpu_time);
-      printf("   Serial sum\n");
+      printf("   Serial sum (OpenMP SIMD pragma)\n");
 
 //******************************************************
 

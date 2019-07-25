@@ -1,4 +1,3 @@
-#include <immintrin.h>
 #include <x86intrin.h>
 
 static double sum[4] __attribute__ ((aligned (64)));

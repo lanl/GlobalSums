@@ -9,7 +9,11 @@ double do_kahan_sum_intel_v8(double* restrict var, long ncells)
    __m512d local_sum = _mm512_load_pd(zero);
    __m512d local_correction = _mm512_load_pd(zero);
 
-   #pragma simd
+#ifdef __INTEL_COMPILER
+      #pragma ivdep
+#else
+      #pragma simd
+#endif
    #pragma vector aligned
    for (long i = 0; i < ncells; i+=8) {
        __m512d var_v = _mm512_load_pd(&var[i]);

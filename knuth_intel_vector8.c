@@ -9,7 +9,11 @@ double do_knuth_sum_intel_v8(double* restrict var, long ncells)
    __m512d local_sum = _mm512_load_pd((double const*) &zero);
    __m512d local_correction = _mm512_load_pd((double const*) &zero);
 
-   #pragma simd
+#ifdef __INTEL_COMPILER
+      #pragma ivdep
+#else
+      #pragma simd
+#endif
    #pragma vector aligned
    for (long i = 0; i < ncells; i+=8) {
       __m512d u = local_sum;

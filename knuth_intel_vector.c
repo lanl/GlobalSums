@@ -8,7 +8,11 @@ double do_knuth_sum_v(double* restrict var, long ncells)
    __m256d local_sum = _mm256_broadcast_sd((double const*) &zero);
    __m256d local_correction = _mm256_broadcast_sd((double const*) &zero);
 
-   #pragma simd
+#ifdef __INTEL_COMPILER
+      #pragma ivdep
+#else
+      #pragma simd
+#endif
    #pragma vector aligned
    for (long i = 0; i < ncells; i+=4) {
       __m256d u = local_sum;

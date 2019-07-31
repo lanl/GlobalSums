@@ -61,7 +61,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
       -fopt-info-loop-optimized -fopt-info-loop-missed")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ansi-alias -xHost\
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -ansi-alias -xHost\
        -qopt-report=5 -qopt-report-phase=vec,loop")
    if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-zmm-usage=high")

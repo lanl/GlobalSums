@@ -9,7 +9,11 @@ double do_kahan_sum_v(double* restrict var, long ncells)
    __m256d local_correction = _mm256_broadcast_sd((double const*) &zero);
    __m256d var_v;
 
+#ifdef __INTEL_COMPILER
+   #pragma ivdep
+#else
    #pragma simd
+#endif
    #pragma vector aligned
    for (long i = 0; i < ncells; i+=4) {
        var_v = _mm256_load_pd(&var[i]);

@@ -17,9 +17,9 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
       -fopt-info-loop-optimized -fopt-info-loop-missed")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-tree-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -ftree-vectorize")
-   if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.0.0")
+   if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
       set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -mprefer-vector-width=512")
-   endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.0.0")
+   endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
@@ -56,9 +56,12 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fstrict-aliasing -ftree-vectorize -fopenmp-simd\
-       -march=native -mtune=native -mprefer-vector-width=512")
+       -march=native -mtune=native")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
       -fopt-info-loop-optimized -fopt-info-loop-missed")
+   if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mprefer-vector-width=512")
+   endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -ansi-alias -xHost\

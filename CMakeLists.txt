@@ -2,7 +2,6 @@ cmake_minimum_required (VERSION 3.0)
 project (globalsums)
 
 set (CMAKE_C_STANDARD 99)
-
 # Set vectorization flags for a few compilers
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
@@ -28,7 +27,6 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
       endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
-
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopt-report=5 -qopt-report-phase=openmp,loop,vec")
@@ -38,10 +36,16 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
      set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -qopt-zmm-usage=high")
    endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
 
+elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -alias=ansi")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Minfo=loop,inline,vect")
+   set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -Mnovect ")
+   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -Mvect=simd")
+
 elseif (CMAKE_C_COMPILER_ID MATCHES "MSVC")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qvec-report:2")
-   set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS}")
-   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS}")
+   set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS}" " ")
+   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS}" " ")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "XL")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qalias=restrict -qstrict -qhot -qarch=auto -qtune=auto")
@@ -85,6 +89,11 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-zmm-usage=high")
    endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
+
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "PGI")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -alias=ansi")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo=loop,inline,vect")
+
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qvec-report:2")
 
@@ -135,7 +144,7 @@ if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STR
                knuth_intel_vector.c
                knuth_intel_vector8.c)
 endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
     set (FILE_LIST ${FILE_LIST} 
                kahan_gcc_vector.c
                kahan_gcc_vector8.c
@@ -145,7 +154,7 @@ if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
                do_full_qdsum_wtrunc.c
                do_qdsum.c
                do_qdsum_wtrunc.c)
-endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
 add_executable(globalsums ${FILE_LIST})
 
 target_include_directories(globalsums PRIVATE vectorclass)
@@ -185,9 +194,9 @@ if(OPENMP_FOUND)
    set_target_properties(globalsums PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
    set_target_properties(globalsums PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif(OPENMP_FOUND)
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
 target_link_libraries(globalsums quadmath)
-endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
 target_link_libraries(globalsums m)
 
 # Cleanup

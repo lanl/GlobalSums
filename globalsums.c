@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
 #include <quadmath.h>
 #endif
 #include <time.h>
@@ -61,7 +61,7 @@ double do_knuth_sum_agner_v8(double* restrict var, long ncells);
 
 double do_pair_sum(double* restrict var, long ncells);
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
 __float128 do_qdsum(double* restrict var, long ncells);
 __float128 do_qdsum_wtrunc(double* restrict var, long ncells, int ndigits);
 __float128 do_full_qdsum(__float128* restrict var, long ncells);
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
       long double accurate_ldsum = (long double)ncellsdiv2 * (long double)high_value +
                                    (long double)ncellsdiv2 * (long double)low_value;
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       __float128 high_valueq = 1.0e-1q;
       __float128 low_valueq  = 1.0e-1q/QORDERS_OF_MAGNITUDE;
       __float128 accurate_qdsum = (__float128)ncellsdiv2 * high_valueq +
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 
       double test_sum, test_accurate_sum;
       long double test_ldsum, test_accurate_ldsum;
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       __float128 test_qdsum, test_accurate_qdsum;
       __float128 mult;
       char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v(energy, ncells);
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v8(energy, ncells);
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v(energy, ncells);
@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v8(energy, ncells);
@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       cpu_timer_start(&cpu_timer);
 
       test_qdsum = do_qdsum(energy, ncells);
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
 
       free(energy);
 
-#ifndef __ibmxl__
+#if defined(__ibmxl__) || defined(__PGI__)
       __float128 *energyq = (__float128 *)malloc(ncells*sizeof(__float128));
 
       for (long i = 0; i < ncells; i++){

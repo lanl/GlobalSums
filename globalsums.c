@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_v(energy, ncells);
@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __ibmxl__
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_v(energy, ncells);

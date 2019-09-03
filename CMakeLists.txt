@@ -12,14 +12,22 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing")
+   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
+   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=powerpc64le")
+   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
       -fopt-info-loop-optimized -fopt-info-loop-missed")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-tree-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -ftree-vectorize")
-   if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
-      set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -mprefer-vector-width=512")
-   endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+         set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -mprefer-vector-width=512")
+      endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
@@ -57,13 +65,19 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") # using Clang
        -march=native -mtune=native -Rpass-analysis=loop-vectorize")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fstrict-aliasing -ftree-vectorize -fopenmp-simd\
-       -march=native -mtune=native")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fstrict-aliasing -ftree-vectorize -fopenmp-simd ")
+   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native")
+   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=powerpc64le")
+   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
       -fopt-info-loop-optimized -fopt-info-loop-missed")
-   if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mprefer-vector-width=512")
-   endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mprefer-vector-width=512")
+      endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
+   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -ansi-alias -xHost\
@@ -110,12 +124,8 @@ set (FILE_LIST globalsums.c
                do_sum_omp_wbittrunc.c
                do_sum_wbittrunc.c
                do_sum_wdigittrunc.c)
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
     set (FILE_LIST ${FILE_LIST} 
-               do_full_qdsum.c
-               do_full_qdsum_wtrunc.c
-               do_qdsum.c
-               do_qdsum_wtrunc.c 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
                kahan_gcc_vector.c
@@ -128,6 +138,13 @@ if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
                kahan_intel_vector8.c
                knuth_intel_vector.c
                knuth_intel_vector8.c)
+endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+    set (FILE_LIST ${FILE_LIST} 
+               do_full_qdsum.c
+               do_full_qdsum_wtrunc.c
+               do_qdsum.c
+               do_qdsum_wtrunc.c)
 endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
 add_executable(globalsums ${FILE_LIST})
 

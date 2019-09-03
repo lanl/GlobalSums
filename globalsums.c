@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#ifndef __ibmxl__
 #include <quadmath.h>
+#endif
 #include <time.h>
 
 #ifdef _OPENMP
@@ -59,10 +61,12 @@ double do_knuth_sum_agner_v8(double* restrict var, long ncells);
 
 double do_pair_sum(double* restrict var, long ncells);
 
+#ifndef __ibmxl__
 __float128 do_qdsum(double* restrict var, long ncells);
 __float128 do_qdsum_wtrunc(double* restrict var, long ncells, int ndigits);
 __float128 do_full_qdsum(__float128* restrict var, long ncells);
 __float128 do_full_qdsum_wtrunc(__float128* restrict var, long ncells, int ndigits);
+#endif
 
 double do_sum_omp(double* restrict var, long ncells);
 double do_sum_omp_wbittrunc(double* restrict var, long ncells, uint nbits);
@@ -119,10 +123,12 @@ int main(int argc, char *argv[])
       long double accurate_ldsum = (long double)ncellsdiv2 * (long double)high_value +
                                    (long double)ncellsdiv2 * (long double)low_value;
 
+#ifndef __ibmxl__
       __float128 high_valueq = 1.0e-1q;
       __float128 low_valueq  = 1.0e-1q/QORDERS_OF_MAGNITUDE;
       __float128 accurate_qdsum = (__float128)ncellsdiv2 * high_valueq +
                                   (__float128)ncellsdiv2 * low_valueq;
+#endif
    
       double *energy = (double *)malloc(ncells*sizeof(double));
 
@@ -134,12 +140,14 @@ int main(int argc, char *argv[])
 
       double test_sum, test_accurate_sum;
       long double test_ldsum, test_accurate_ldsum;
+#ifndef __ibmxl__
       __float128 test_qdsum, test_accurate_qdsum;
+      __float128 mult;
+      char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
+#endif
       struct timespec cpu_timer;
       double cpu_time;
-      char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
       int n;
-      __float128 mult;
 
 //******************************************************
 
@@ -239,6 +247,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_v(energy, ncells);
@@ -308,6 +317,7 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide Fog C++ vector class Kahan sum\n");
+#endif
 
 //******************************************************
 
@@ -322,6 +332,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_v(energy, ncells);
@@ -390,6 +401,7 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide Fog C++ vector class Knuth sum\n");
+#endif
 
 //******************************************************
 
@@ -408,6 +420,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_qdsum = do_qdsum(energy, ncells);
@@ -421,6 +434,7 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-24s sum %-24s diff %-20s relative diff %-20s runtime %lf",
              quadstring1,quadstring2,quadstring3,quadstring4,cpu_time);
       printf("   Serial sum with quad double accumulator\n");
+#endif
 
 //******************************************************
 
@@ -448,6 +462,7 @@ int main(int argc, char *argv[])
 
       free(energy);
 
+#ifndef __ibmxl__
       __float128 *energyq = (__float128 *)malloc(ncells*sizeof(__float128));
 
       for (long i = 0; i < ncells; i++){
@@ -495,6 +510,7 @@ int main(int argc, char *argv[])
 //******************************************************
 
       free(energyq);
+#endif
 
       printf("\n");
 

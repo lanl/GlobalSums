@@ -36,9 +36,11 @@ elseif (CMAKE_C_COMPILER_ID MATCHES "MSVC")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS}")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "XL")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qalias=restrict -qhot -qarch=pwr9 -qtune=pwr9")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qalias=restrict -qhot -qarch=auto -qtune=auto")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qreport")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -qsimd=noauto")
+   # "long vector" optimizations
+   #set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -qhot=novector")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -qsimd=auto")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "Cray")
@@ -73,7 +75,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qvec-report:2")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qalias=restrict -qsimd=auto -qreport")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qalias=restrict -qhot -qarch=auto -qtune=auto")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qreport")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Cray")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h restrict -h vector3 -h msgs -h negmsgs")
@@ -88,13 +91,11 @@ if(HAVE_AVX512)
     message("-- Detecting AVX512 hardware -- found")
     add_definitions(-DHAVE_AVX512)
 else()
-    message("-- Detecting AVX512 hardware -- not present")
+    message("-- Deecting AVX512 hardware -- not present")
 endif()
 
 # Adds build target of globalsums with source code files
-add_executable(globalsums globalsums.c
-               do_full_qdsum.c
-               do_full_qdsum_wtrunc.c
+set (FILE_LIST globalsums.c
                do_kahan_sum.c
                serial_sum_novec.c
                do_kahan_sum_omp.c
@@ -104,25 +105,31 @@ add_executable(globalsums globalsums.c
                do_ldsum_wbittrunc.c
                do_ldsum_wdigittrunc.c
                do_pair_sum.c
-               do_qdsum.c
-               do_qdsum_wtrunc.c
                do_sum.c
                do_sum_omp.c
                do_sum_omp_wbittrunc.c
                do_sum_wbittrunc.c
-               do_sum_wdigittrunc.c
+               do_sum_wdigittrunc.c)
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+    set (FILE_LIST ${FILE_LIST} 
+               do_full_qdsum.c
+               do_full_qdsum_wtrunc.c
+               do_qdsum.c
+               do_qdsum_wtrunc.c 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
                kahan_gcc_vector.c
                kahan_gcc_vector8.c
-               kahan_intel_vector.c
-               kahan_intel_vector8.c
                knuth_fog_vector.cpp
                knuth_fog_vector8.cpp
                knuth_gcc_vector.c
                knuth_gcc_vector8.c
+               kahan_intel_vector.c
+               kahan_intel_vector8.c
                knuth_intel_vector.c
                knuth_intel_vector8.c)
+endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+add_executable(globalsums ${FILE_LIST})
 
 target_include_directories(globalsums PRIVATE vectorclass)
 set_source_files_properties(globalsums.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
@@ -144,14 +151,14 @@ set_source_files_properties(do_sum_omp.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FL
 set_source_files_properties(do_sum_omp_wbittrunc.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(do_sum_wbittrunc.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(do_sum_wdigittrunc.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
-set_source_files_properties(kahan_fog_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
-set_source_files_properties(kahan_fog_vector8.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
+set_source_files_properties(kahan_fog_vector.cpp PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
+set_source_files_properties(kahan_fog_vector8.cpp PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(kahan_gcc_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(kahan_gcc_vector8.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(kahan_intel_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(kahan_intel_vector8.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
-set_source_files_properties(knuth_fog_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
-set_source_files_properties(knuth_fog_vector8.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
+set_source_files_properties(knuth_fog_vector.cpp PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
+set_source_files_properties(knuth_fog_vector8.cpp PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(knuth_gcc_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(knuth_gcc_vector8.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
 set_source_files_properties(knuth_intel_vector.c PROPERTIES COMPILE_FLAGS ${CMAKE_VEC_FLAGS})
@@ -161,7 +168,10 @@ if(OPENMP_FOUND)
    set_target_properties(globalsums PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
    set_target_properties(globalsums PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif(OPENMP_FOUND)
-target_link_libraries(globalsums quadmath m)
+if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+target_link_libraries(globalsums quadmath)
+endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
+target_link_libraries(globalsums m)
 
 # Cleanup
 add_custom_target(distclean COMMAND rm -rf CMakeCache.txt CMakeFiles

@@ -14,7 +14,7 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
    set(HAVE_GCC_VECTOR_EXTENSIONS true)
 
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass-analysis=loop-vectorize")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize")
 
@@ -82,8 +82,8 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") # using Clang
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -fvectorize\
-       -march=native -mtune=native -Rpass-analysis=loop-vectorize")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -fvectorize -march=native -mtune=native")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize") 
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fstrict-aliasing -ftree-vectorize -fopenmp-simd ")

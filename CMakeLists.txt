@@ -2,17 +2,29 @@ cmake_minimum_required (VERSION 3.0)
 project (globalsums)
 
 set (CMAKE_C_STANDARD 99)
+
+if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+   set(HAVE_X86_64_INTRINSICS true)
+endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
 # Set vectorization flags for a few compilers
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
+
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
+   set(HAVE_GCC_VECTOR_EXTENSIONS true)
+
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass-analysis=loop-vectorize")
-   set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fnovectorize")
+   set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
+   set(HAVE_QUADMATH true)
+   set(HAVE_GCC_VECTOR_EXTENSIONS true)
+
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      set(HAVE_FOG_VECTOR_CLASS true)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=powerpc64le")
@@ -28,6 +40,9 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
+   set(HAVE_QUADMATH true)
+   set(HAVE_FOG_VECTOR_CLASS true)
+
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopt-report=5 -qopt-report-phase=openmp,loop,vec")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -no-vec")
@@ -37,6 +52,8 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
+   set(HAVE_FOG_VECTOR_CLASS true)
+
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -alias=ansi")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Minfo=loop,inline,vect")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -Mnovect ")
@@ -133,28 +150,43 @@ set (FILE_LIST globalsums.c
                do_sum_omp_wbittrunc.c
                do_sum_wbittrunc.c
                do_sum_wdigittrunc.c)
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
-    set (FILE_LIST ${FILE_LIST} 
+
+if (HAVE_FOG_VECTOR_CLASS)
+   add_definitions(-DHAVE_FOG_VECTOR_CLASS)
+   set (FILE_LIST ${FILE_LIST} 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
                knuth_fog_vector.cpp
-               knuth_fog_vector8.cpp
+               knuth_fog_vector8.cpp)
+endif (HAVE_FOG_VECTOR_CLASS)
+
+if (HAVE_X86_64_INTRINSICS)
+   add_definitions(-DHAVE_X86_64_INTRINSICS)
+   set (FILE_LIST ${FILE_LIST} 
                kahan_intel_vector.c
                kahan_intel_vector8.c
                knuth_intel_vector.c
                knuth_intel_vector8.c)
-endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
-    set (FILE_LIST ${FILE_LIST} 
+endif (HAVE_X86_64_INTRINSICS)
+
+if (HAVE_GCC_VECTOR_EXTENSIONS)
+   add_definitions(-DHAVE_GCC_VECTOR_EXTENSIONS)
+   set (FILE_LIST ${FILE_LIST} 
                kahan_gcc_vector.c
                kahan_gcc_vector8.c
                knuth_gcc_vector.c
-               knuth_gcc_vector8.c
+               knuth_gcc_vector8.c)
+endif (HAVE_GCC_VECTOR_EXTENSIONS)
+
+if (HAVE_QUADMATH)
+   add_definitions(-DHAVE_QUADMATH)
+   set (FILE_LIST ${FILE_LIST} 
                do_full_qdsum.c
                do_full_qdsum_wtrunc.c
                do_qdsum.c
                do_qdsum_wtrunc.c)
-endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
+endif (HAVE_QUADMATH)
+
 add_executable(globalsums ${FILE_LIST})
 
 target_include_directories(globalsums PRIVATE vectorclass)

@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
 #include <quadmath.h>
 #endif
 #include <time.h>
@@ -61,7 +61,7 @@ double do_knuth_sum_agner_v8(double* restrict var, long ncells);
 
 double do_pair_sum(double* restrict var, long ncells);
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
 __float128 do_qdsum(double* restrict var, long ncells);
 __float128 do_qdsum_wtrunc(double* restrict var, long ncells, int ndigits);
 __float128 do_full_qdsum(__float128* restrict var, long ncells);
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
       long double accurate_ldsum = (long double)ncellsdiv2 * (long double)high_value +
                                    (long double)ncellsdiv2 * (long double)low_value;
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
       __float128 high_valueq = 1.0e-1q;
       __float128 low_valueq  = 1.0e-1q/QORDERS_OF_MAGNITUDE;
       __float128 accurate_qdsum = (__float128)ncellsdiv2 * high_valueq +
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 
       double test_sum, test_accurate_sum;
       long double test_ldsum, test_accurate_ldsum;
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
       __float128 test_qdsum, test_accurate_qdsum;
       __float128 mult;
       char quadstring1[40], quadstring2[40], quadstring3[40], quadstring4[40];
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_X86_64_INTRINSICS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_v(energy, ncells);
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_GCC_VECTOR_EXTENSIONS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v(energy, ncells);
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_FOG_VECTOR_CLASS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_agner_v(energy, ncells);
@@ -283,9 +283,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   Agner C++ vector class sum with double double kahan sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifdef HAVE_X86_64_INTRINSICS
 #ifdef HAVE_AVX512
       cpu_timer_start(&cpu_timer);
 
@@ -301,7 +303,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_GCC_VECTOR_EXTENSIONS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v8(energy, ncells);
@@ -315,7 +317,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_FOG_VECTOR_CLASS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_agner_v8(energy, ncells);
@@ -340,7 +342,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_X86_64_INTRINSICS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_v(energy, ncells);
@@ -353,7 +355,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_GCC_VECTOR_EXTENSIONS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v(energy, ncells);
@@ -366,7 +368,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_FOG_VECTOR_CLASS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_agner_v(energy, ncells);
@@ -375,9 +377,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   Agner C++ vector class sum with double double knuth sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifdef HAVE_X86_64_INTRINSICS
 #ifdef HAVE_AVX512
       cpu_timer_start(&cpu_timer);
 
@@ -393,7 +397,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_GCC_VECTOR_EXTENSIONS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v8(energy, ncells);
@@ -407,7 +411,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifndef __PPC__
+#ifdef HAVE_FOG_VECTOR_CLASS
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_agner_v8(energy, ncells);
@@ -478,7 +482,7 @@ int main(int argc, char *argv[])
 
       free(energy);
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
       __float128 *energyq = (__float128 *)malloc(ncells*sizeof(__float128));
 
       for (long i = 0; i < ncells; i++){

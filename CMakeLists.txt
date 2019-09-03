@@ -44,7 +44,7 @@ elseif (CMAKE_C_COMPILER_ID MATCHES "MSVC")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS}")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "XL")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qalias=restrict -qhot -qarch=auto -qtune=auto")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qalias=restrict -qstrict -qhot -qarch=auto -qtune=auto")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qreport")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -qsimd=noauto")
    # "long vector" optimizations
@@ -89,7 +89,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qvec-report:2")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qalias=restrict -qhot -qarch=auto -qtune=auto")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qalias=restrict -qstrict -qhot -qarch=auto -qtune=auto")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qreport")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Cray")
@@ -128,12 +128,8 @@ if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STR
     set (FILE_LIST ${FILE_LIST} 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
-               kahan_gcc_vector.c
-               kahan_gcc_vector8.c
                knuth_fog_vector.cpp
                knuth_fog_vector8.cpp
-               knuth_gcc_vector.c
-               knuth_gcc_vector8.c
                kahan_intel_vector.c
                kahan_intel_vector8.c
                knuth_intel_vector.c
@@ -141,6 +137,10 @@ if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STR
 endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
 if (NOT CMAKE_C_COMPILER_ID MATCHES "XL")
     set (FILE_LIST ${FILE_LIST} 
+               kahan_gcc_vector.c
+               kahan_gcc_vector8.c
+               knuth_gcc_vector.c
+               knuth_gcc_vector8.c
                do_full_qdsum.c
                do_full_qdsum_wtrunc.c
                do_qdsum.c

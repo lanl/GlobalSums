@@ -256,9 +256,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
           accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   Intel Vectorized sum with double double kahan sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v(energy, ncells);
@@ -267,9 +269,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   GCC Extensions Vectorized sum with double double kahan sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_agner_v(energy, ncells);
@@ -293,9 +297,11 @@ int main(int argc, char *argv[])
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide Intel Vector intrinsics Kahan sum\n");
 #endif
+#endif
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_gcc_v8(energy, ncells);
@@ -305,9 +311,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide GCC vector extensions Kahan sum\n");
+#endif
 
 //******************************************************
 
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_kahan_sum_agner_v8(energy, ncells);
@@ -341,9 +349,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   Intel Vectorized sum with double double knuth sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v(energy, ncells);
@@ -352,9 +362,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   GCC Extensions Vectorized sum with double double knuth sum accumulator\n");
+#endif
 
 //******************************************************
 
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_agner_v(energy, ncells);
@@ -377,9 +389,11 @@ int main(int argc, char *argv[])
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide Intel Vector intrinsics Knuth sum\n");
 #endif
+#endif
 
 //******************************************************
 
+#ifndef __ibmxl__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_gcc_v8(energy, ncells);
@@ -389,9 +403,11 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              accurate_sum,test_sum,(test_sum-accurate_sum),((test_sum-accurate_sum)/accurate_sum), cpu_time);
       printf("   8 wide GCC vector extensions Knuth sum\n");
+#endif
 
 //******************************************************
 
+#ifndef __PPC__
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_agner_v8(energy, ncells);

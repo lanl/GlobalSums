@@ -3,28 +3,44 @@ project (globalsums)
 
 set (CMAKE_C_STANDARD 99)
 
+# Set optional intrinsic support
 if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-   set(HAVE_X86_64_INTRINSICS true)
+   if (NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
+      set(HAVE_X86_64_INTRINSICS true)
+   endif (NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
 endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
+   set(HAVE_GCC_VECTOR_EXTENSIONS true)
+
+elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
+   set(HAVE_QUADMATH true)
+   set(HAVE_GCC_VECTOR_EXTENSIONS true)
+   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      set(HAVE_FOG_VECTOR_CLASS true)
+   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
+elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
+   set(HAVE_QUADMATH true)
+   set(HAVE_FOG_VECTOR_CLASS true)
+
+elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
+    #set(HAVE_FOG_VECTOR_CLASS true)
+
+endif()
 
 # Set vectorization flags for a few compilers
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
-   set(HAVE_GCC_VECTOR_EXTENSIONS true)
-
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(HAVE_QUADMATH true)
-   set(HAVE_GCC_VECTOR_EXTENSIONS true)
-
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-      set(HAVE_FOG_VECTOR_CLASS true)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=powerpc64le")
@@ -40,9 +56,6 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-   set(HAVE_QUADMATH true)
-   set(HAVE_FOG_VECTOR_CLASS true)
-
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopt-report=5 -qopt-report-phase=openmp,loop,vec")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -no-vec")
@@ -52,8 +65,6 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
-   set(HAVE_FOG_VECTOR_CLASS true)
-
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -alias=ansi")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Minfo=loop,inline,vect")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -Mnovect ")

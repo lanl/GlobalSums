@@ -12,9 +12,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 # Set vectorization flags for a few compilers
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize
+                                       -Rpass-analysis=loop-vectorize")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-vectorize")
-   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize")
+   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize -fopenmp-simd")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing")
@@ -28,7 +29,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
       -fopt-info-loop-optimized -fopt-info-loop-missed")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-tree-vectorize")
-   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -ftree-vectorize")
+   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -ftree-vectorize -fopenmp-simd")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
       if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
          set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -mprefer-vector-width=512")
@@ -39,7 +40,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias -fp-model:precise")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopt-report=5 -qopt-report-phase=openmp,loop,vec")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -no-vec")
-   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -xHOST")
+   set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -xHOST -qopenmp-simd")
    if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -qopt-zmm-usage=high")
    endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
@@ -73,11 +74,11 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") # using Clang
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -fvectorize -march=native -mtune=native")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -fvectorize -fopenmp-simd -march=native -mtune=native")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize") 
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fstrict-aliasing -ftree-vectorize -fopenmp-simd ")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -ftree-vectorize -fopenmp-simd ")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native")
    elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
@@ -92,7 +93,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fp-model:precise -ansi-alias -xHost\
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model:precise -ansi-alias -xHost -qopenmp-simd\
        -qopt-report=5 -qopt-report-phase=vec,loop")
    if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-zmm-usage=high")
@@ -103,7 +104,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "PGI")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo=loop,inline,vect")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qvec-report:2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qvec-report:2")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qalias=restrict -qstrict -qhot -qarch=auto -qtune=auto")
@@ -138,6 +139,7 @@ try_compile(HAVE_FOG_VECTOR_CLASS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/fog
 if(HAVE_FOG_VECTOR_CLASS)
    message("-- Trying Fog Vector Class -- works")
    add_definitions(-DHAVE_FOG_VECTOR_CLASS)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512")
    set (FILE_LIST ${FILE_LIST} 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
@@ -198,7 +200,7 @@ if(HAVE_QUADMATH)
                do_qdsum.c
                do_qdsum_wtrunc.c)
 else()
-   message("-- Trying Quad math library -- works")
+   message("-- Trying Quad math library -- fails")
 endif (HAVE_QUADMATH)
 
 add_executable(globalsums ${FILE_LIST})

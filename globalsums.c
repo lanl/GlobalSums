@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#if defined(__ibmxl__) || defined(__PGI__)
+#ifdef HAVE_QUADMATH
       cpu_timer_start(&cpu_timer);
 
       test_qdsum = do_qdsum(energy, ncells);

@@ -3,36 +3,13 @@ project (globalsums)
 
 set (CMAKE_C_STANDARD 99)
 
-# Set optional intrinsic support
-if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-   if (NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
-      set(HAVE_X86_64_INTRINSICS true)
-   endif (NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
-endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
-   set(HAVE_GCC_VECTOR_EXTENSIONS true)
-
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(HAVE_QUADMATH true)
-   set(HAVE_GCC_VECTOR_EXTENSIONS true)
-   if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-      set(HAVE_FOG_VECTOR_CLASS true)
-   endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-   set(HAVE_QUADMATH true)
-   set(HAVE_FOG_VECTOR_CLASS true)
-   set(HAVE_GCC_VECTOR_EXTENSIONS true)
-
-elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
-   #set(HAVE_FOG_VECTOR_CLASS true)
-
-endif()
-
-# Set vectorization flags for a few compilers
+# Set default optimization level
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 
+#message(${CMAKE_C_COMPILER_ID})
+#message(${CMAKE_SYSTEM_PROCESSOR})
+
+# Set vectorization flags for a few compilers
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize")
@@ -45,6 +22,8 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=powerpc64le")
+   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
       -fopt-info-loop-optimized -fopt-info-loop-missed")
@@ -137,15 +116,6 @@ endif()
 
 find_package(OpenMP)
 
-try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/test.c")
-
-if(HAVE_AVX512)
-    message("-- Detecting AVX512 hardware -- found")
-    add_definitions(-DHAVE_AVX512)
-else()
-    message("-- Deecting AVX512 hardware -- not present")
-endif()
-
 # Adds build target of globalsums with source code files
 set (FILE_LIST globalsums.c
                do_kahan_sum.c
@@ -163,40 +133,72 @@ set (FILE_LIST globalsums.c
                do_sum_wbittrunc.c
                do_sum_wdigittrunc.c)
 
-if (HAVE_FOG_VECTOR_CLASS)
+try_compile(HAVE_FOG_VECTOR_CLASS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/fogvectorclasstest.cpp")
+
+if(HAVE_FOG_VECTOR_CLASS)
+   message("-- Trying Fog Vector Class -- works")
    add_definitions(-DHAVE_FOG_VECTOR_CLASS)
    set (FILE_LIST ${FILE_LIST} 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
                knuth_fog_vector.cpp
                knuth_fog_vector8.cpp)
-endif (HAVE_FOG_VECTOR_CLASS)
+else()
+    message("-- Trying Fog Vector Class -- fails")
+endif()
 
-if (HAVE_X86_64_INTRINSICS)
+
+try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
+
+if(HAVE_X86_64_INTRINSICS)
+   message("-- Trying X86_64 intrinsics -- works")
    add_definitions(-DHAVE_X86_64_INTRINSICS)
    set (FILE_LIST ${FILE_LIST} 
                kahan_intel_vector.c
                kahan_intel_vector8.c
                knuth_intel_vector.c
                knuth_intel_vector8.c)
-endif (HAVE_X86_64_INTRINSICS)
+           try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
 
-if (HAVE_GCC_VECTOR_EXTENSIONS)
+   if(HAVE_AVX512)
+       message("-- Detecting AVX512 hardware -- found")
+       add_definitions(-DHAVE_AVX512)
+   else()
+       message("-- Detecting AVX512 hardware -- not present")
+   endif()
+
+else()
+    message("-- Trying X86_64 intrinsics -- fails")
+endif()
+
+
+try_compile(HAVE_GCC_VECTOR_EXTENSIONS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/gcc_vector_extrinsics_test.c")
+
+if(HAVE_GCC_VECTOR_EXTENSIONS)
+   message("-- Trying GCC Vector Extensions -- works")
    add_definitions(-DHAVE_GCC_VECTOR_EXTENSIONS)
    set (FILE_LIST ${FILE_LIST} 
                kahan_gcc_vector.c
                kahan_gcc_vector8.c
                knuth_gcc_vector.c
                knuth_gcc_vector8.c)
+else()
+   message("-- Trying GCC Vector Extensions -- fails")
 endif (HAVE_GCC_VECTOR_EXTENSIONS)
 
-if (HAVE_QUADMATH)
+
+find_path(HAVE_QUADMATH quadmath.h CMAKE_INCLUDE_PATH)
+
+if(HAVE_QUADMATH)
+   message("-- Trying Quad math library -- works")
    add_definitions(-DHAVE_QUADMATH)
    set (FILE_LIST ${FILE_LIST} 
                do_full_qdsum.c
                do_full_qdsum_wtrunc.c
                do_qdsum.c
                do_qdsum_wtrunc.c)
+else()
+   message("-- Trying Quad math library -- works")
 endif (HAVE_QUADMATH)
 
 add_executable(globalsums ${FILE_LIST})
@@ -238,9 +240,10 @@ if(OPENMP_FOUND)
    set_target_properties(globalsums PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
    set_target_properties(globalsums PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif(OPENMP_FOUND)
-if (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
+if (HAVE_QUADMATH)
 target_link_libraries(globalsums quadmath)
-endif (NOT CMAKE_C_COMPILER_ID MATCHES "XL" AND NOT CMAKE_C_COMPILER_ID MATCHES "PGI")
+endif (HAVE_QUADMATH)
+
 target_link_libraries(globalsums m)
 
 # Cleanup

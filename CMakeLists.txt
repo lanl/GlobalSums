@@ -23,9 +23,10 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
    set(HAVE_QUADMATH true)
    set(HAVE_FOG_VECTOR_CLASS true)
+   set(HAVE_GCC_VECTOR_EXTENSIONS true)
 
 elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
-    #set(HAVE_FOG_VECTOR_CLASS true)
+   #set(HAVE_FOG_VECTOR_CLASS true)
 
 endif()
 
@@ -56,7 +57,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi-alias -fp-model:precise")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopt-report=5 -qopt-report-phase=openmp,loop,vec")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -no-vec")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -xHOST")
@@ -112,7 +113,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -ansi-alias -xHost\
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512 -fp-model:precise -ansi-alias -xHost\
        -qopt-report=5 -qopt-report-phase=vec,loop")
    if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-zmm-usage=high")

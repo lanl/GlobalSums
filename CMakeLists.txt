@@ -12,7 +12,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 # Set vectorization flags for a few compilers
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") # using Clang
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -march=native -mtune=native")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize\
                                        -Rpass-analysis=loop-vectorize")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -fvectorize -fopenmp-simd")
@@ -27,7 +27,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") # using GCC
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
-      -fopt-info-loop-optimized -fopt-info-loop-missed")
+                                       -fopt-info-loop-optimized -fopt-info-loop-missed")
    set(CMAKE_NOVEC_FLAGS "${CMAKE_NOVEC_FLAGS} -fno-tree-vectorize")
    set(CMAKE_VEC_FLAGS "${CMAKE_VEC_FLAGS} -ftree-vectorize -fopenmp-simd")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
@@ -74,18 +74,23 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") # using Clang
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -fvectorize -fopenmp-simd -march=native -mtune=native")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize") 
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -march=native -mtune=native")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=loop-vectorize -Rpass-missed=loop-vectorize\
+                        ${CMAKE_CXX_FLAGS} -Rpass-analysis=loop-vectorize") 
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvectorize -fopenmp-simd")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -ftree-vectorize -fopenmp-simd ")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native")
    elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=powerpc64le")
+   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native")
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopt-info-vec-optimized -fopt-info-vec-missed\
-      -fopt-info-loop-optimized -fopt-info-loop-missed")
+                                           -fopt-info-loop-optimized -fopt-info-loop-missed")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -fopenmp-simd")
    if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
       if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "7.4.0")
          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mprefer-vector-width=512")
@@ -93,8 +98,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # using GCC
    endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model:precise -ansi-alias -xHost -qopenmp-simd\
-       -qopt-report=5 -qopt-report-phase=vec,loop")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ansi-alias -fp-model:precise")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-report=5 -qopt-report-phase=vec,loop")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -xHost -qopenmp-simd")
    if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-zmm-usage=high")
    endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "17.0.4")
@@ -102,6 +108,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel") # using Intel C
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "PGI")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -alias=ansi")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo=loop,inline,vect")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Mvect=simd")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qvec-report:2")
@@ -111,7 +118,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qreport")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Cray")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h restrict -h vector3 -h msgs -h negmsgs")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h restrict=a")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h msgs -h negmsgs -h list=a")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h vector3")
 
 endif()
 
@@ -150,7 +159,7 @@ else()
 endif()
 
 
-if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+#if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
    try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
 
    if(HAVE_X86_64_INTRINSICS)
@@ -173,9 +182,9 @@ if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCES
    else()
        message("-- Trying X86_64 intrinsics -- fails")
    endif()
-else (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-   message("-- Trying X86_64 intrinsics -- fails")
-endif (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+   #else (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
+   #message("-- Trying X86_64 intrinsics -- fails")
+   #endif (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
 
 
 try_compile(HAVE_GCC_VECTOR_EXTENSIONS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/gcc_vector_extrinsics_test.c")
@@ -193,7 +202,7 @@ else()
 endif (HAVE_GCC_VECTOR_EXTENSIONS)
 
 
-find_path(HAVE_QUADMATH quadmath.h CMAKE_INCLUDE_PATH)
+try_compile(HAVE_QUADMATH "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/quadmath_test.c")
 
 if(HAVE_QUADMATH)
    message("-- Trying Quad math library -- works")

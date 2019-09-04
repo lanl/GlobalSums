@@ -29,7 +29,7 @@ double do_knuth_sum_gcc_v8(double* restrict var, long ncells)
 
    for (long i = 0; i < 8; i++) {
       ud = final_sum;
-      vd = sum_v[i] + final_correction;
+      vd = sum[i] + final_correction;
       uptd = ud + vd;
       upd = uptd - vd;
       vppd = uptd - upd;

@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
-#ifdef HAVE_X86_64_INTRINSICS
+#ifdef HAVE_X86_64_INTRINSICS_XXX
 #ifdef HAVE_AVX512
       cpu_timer_start(&cpu_timer);
 

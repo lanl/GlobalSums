@@ -150,28 +150,32 @@ else()
 endif()
 
 
-try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
+if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+   try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
 
-if(HAVE_X86_64_INTRINSICS)
-   message("-- Trying X86_64 intrinsics -- works")
-   add_definitions(-DHAVE_X86_64_INTRINSICS)
-   set (FILE_LIST ${FILE_LIST} 
-               kahan_intel_vector.c
-               kahan_intel_vector8.c
-               knuth_intel_vector.c
-               knuth_intel_vector8.c)
-           try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
+   if(HAVE_X86_64_INTRINSICS)
+      message("-- Trying X86_64 intrinsics -- works")
+      add_definitions(-DHAVE_X86_64_INTRINSICS)
+      set (FILE_LIST ${FILE_LIST} 
+                  kahan_intel_vector.c
+                  kahan_intel_vector8.c
+                  knuth_intel_vector.c
+                  knuth_intel_vector8.c)
+              try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
 
-   if(HAVE_AVX512)
-       message("-- Detecting AVX512 hardware -- found")
-       add_definitions(-DHAVE_AVX512)
+      if(HAVE_AVX512)
+          message("-- Detecting AVX512 hardware -- found")
+          add_definitions(-DHAVE_AVX512)
+      else()
+          message("-- Detecting AVX512 hardware -- not present")
+      endif()
+
    else()
-       message("-- Detecting AVX512 hardware -- not present")
+       message("-- Trying X86_64 intrinsics -- fails")
    endif()
-
-else()
-    message("-- Trying X86_64 intrinsics -- fails")
-endif()
+else (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+   message("-- Trying X86_64 intrinsics -- fails")
+endif (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND NOT "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 
 try_compile(HAVE_GCC_VECTOR_EXTENSIONS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/gcc_vector_extrinsics_test.c")

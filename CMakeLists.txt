@@ -9,6 +9,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
 set(CMAKE_MODULE_PATH cmake/Modules)
 
 find_package(Vector)
+#message("VECTOR_C_FLAGS is ${VECTOR_C_FLAGS}")
+#message("VECTOR_C_VERBOSE is ${VECTOR_C_VERBOSE}")
+#message("VECTOR_NOVEC_C_FLAGS is ${VECTOR_NOVEC_C_FLAGS}")
+#message("VECTOR_ALIASING_C_FLAGS is ${VECTOR_ALIASING_FLAGS}")
+#message("VECTOR_ARCH_C_FLAGS is ${VECTOR_ARCH_C_FLAGS}")
+#message("VECTOR_FPMODEL_C_FLAGS is ${VECTOR_FPMODEL_C_FLAGS}")
+#message("VECTOR_OPENMP_SIMD_C_FLAGS is ${VECTOR_OPENMP_SIMD_C_FLAGS}")
 find_package(OpenMP)
 
 # Adds build target of globalsums with source code files
@@ -104,8 +111,6 @@ endif (HAVE_QUADMATH)
 add_executable(globalsums ${FILE_LIST})
 
 
-message("VECTOR_C_FLAGS is ${VECTOR_C_FLAGS}")
-message("VECTOR_C_VERBOSE is ${VECTOR_C_VERBOSE}")
 
 if (CMAKE_VECTOR_VERBOSE)
     set(VECTOR_C_FLAGS "${VECTOR_C_FLAGS} ${VECTOR_C_VERBOSE}")

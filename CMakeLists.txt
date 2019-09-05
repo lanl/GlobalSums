@@ -5,6 +5,7 @@ set (CMAKE_C_STANDARD 99)
 
 # Set default optimization level
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 
 set(CMAKE_MODULE_PATH cmake/Modules)
 
@@ -56,13 +57,13 @@ endif()
 
    if(HAVE_X86_64_INTRINSICS)
       message("-- Trying X86_64 intrinsics -- works")
-      add_definitions(-DHAVE_X86_64_INTRINSICS)
+      add_definitions(-DHAVE_X86_64_INTRINSICS -DMAX_VECTOR_SIZE=512)
       set (FILE_LIST ${FILE_LIST} 
                   kahan_intel_vector.c
                   kahan_intel_vector8.c
                   knuth_intel_vector.c
                   knuth_intel_vector8.c)
-              try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
+      try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
 
       if(HAVE_AVX512)
           message("-- Detecting AVX512 hardware -- found")

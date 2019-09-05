@@ -262,6 +262,6 @@ if(CMAKE_Fortran_COMPILER_LOADED)
                      VECTOR_ARCH_Fortran_FLAGS VECTOR_FPMODEL_Fortran_FLAGS VECTOR_OPENMP_SIMD_Fortran_FLAGS)
 endif(CMAKE_Fortran_COMPILER_LOADED)
 
-message(STATUS  "Setting Vector C Vector flags to -- ${VECTOR_C_FLAGS}")
+message(STATUS  "Setting Vector C flags to -- ${VECTOR_C_FLAGS}")
 message(STATUS  "Setting Vector C No-Vector flags to -- ${VECTOR_NOVEC_C_FLAGS}")
 message(STATUS  "Setting Vector C Verbose flags to -- ${VECTOR_C_VERBOSE}")

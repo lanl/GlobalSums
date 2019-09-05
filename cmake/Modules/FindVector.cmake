@@ -1,4 +1,9 @@
-# Version 0.2 Increment by 0.1 every change
+# Version 0.3 Increment by 0.1 every change
+# Operation tested on
+#    Intel Skylake with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
+#    AMD-Epyc with with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
+#    ARM with clang/8.0.0 gcc/9.1.0 ThunderX2CN99/RHEL/7/gcc-8.2.0/armpl/19.2.0
+#    Power9 with clang/8.0.0 gcc/9.1.0 ibm/xlc-16.1.1.3-xlf-16.1.1.3 pgi/19.3
 
 # Set vectorization flags for a few compilers
 if(CMAKE_C_COMPILER_LOADED)

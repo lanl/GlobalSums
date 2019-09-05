@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "vectorclass.h"
 
 static double sum[4] __attribute__ ((aligned (64)));

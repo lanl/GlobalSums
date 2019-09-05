@@ -36,89 +36,92 @@ set (FILE_LIST globalsums.c
                do_sum_wbittrunc.c
                do_sum_wdigittrunc.c)
 
+#Pushing vector flags onto compiler flags for try compiles
+set(CMAKE_C_FLAGS_SAVE ${CMAKE_C_FLAGS})
+set(CMAKE_CXX_FLAGS_SAVE ${CMAKE_CXX_FLAGS})
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VECTOR_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VECTOR_C_FLAGS}")
+
 try_compile(HAVE_FOG_VECTOR_CLASS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/fogvectorclasstest.cpp")
 
 if(HAVE_FOG_VECTOR_CLASS)
-   message("-- Trying Fog Vector Class -- works")
-   add_definitions(-DHAVE_FOG_VECTOR_CLASS)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512")
-   set (FILE_LIST ${FILE_LIST} 
+    message(STATUS "Trying Fog Vector Class -- works")
+    add_definitions(-DHAVE_FOG_VECTOR_CLASS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_VECTOR_SIZE=512")
+    set (FILE_LIST ${FILE_LIST} 
                kahan_fog_vector.cpp
                kahan_fog_vector8.cpp
                knuth_fog_vector.cpp
                knuth_fog_vector8.cpp)
 else()
-    message("-- Trying Fog Vector Class -- fails")
+    message(STATUS "Trying Fog Vector Class -- fails")
 endif()
 
 
-#if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
-   try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
+try_compile(HAVE_X86_64_INTRINSICS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/x86_64_intrinsics_test.c")
 
-   if(HAVE_X86_64_INTRINSICS)
-      message("-- Trying X86_64 intrinsics -- works")
-      add_definitions(-DHAVE_X86_64_INTRINSICS -DMAX_VECTOR_SIZE=512)
-      set (FILE_LIST ${FILE_LIST} 
-                  kahan_intel_vector.c
-                  kahan_intel_vector8.c
-                  knuth_intel_vector.c
-                  knuth_intel_vector8.c)
-      try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
+if(HAVE_X86_64_INTRINSICS)
+    message(STATUS "Trying X86_64 intrinsics -- works")
+    add_definitions(-DHAVE_X86_64_INTRINSICS -DMAX_VECTOR_SIZE=512)
+    set (FILE_LIST ${FILE_LIST} 
+               kahan_intel_vector.c
+               kahan_intel_vector8.c
+               knuth_intel_vector.c
+               knuth_intel_vector8.c)
 
-      if(HAVE_AVX512)
-          message("-- Detecting AVX512 hardware -- found")
-          add_definitions(-DHAVE_AVX512)
-      else()
-          message("-- Detecting AVX512 hardware -- not present")
-      endif()
+    try_compile(HAVE_AVX512 "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/AVX512test.c")
 
-   else()
-       message("-- Trying X86_64 intrinsics -- fails")
-   endif()
-   #else (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
-   #message("-- Trying X86_64 intrinsics -- fails")
-   #endif (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel" AND "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64"))
+    if(HAVE_AVX512)
+        message(STATUS "Detecting AVX512 hardware -- found")
+        add_definitions(-DHAVE_AVX512)
+    else()
+        message(STATUS "Detecting AVX512 hardware -- not present")
+    endif()
+
+else()
+    message(STATUS "Trying X86_64 intrinsics -- fails")
+endif()
 
 
 try_compile(HAVE_GCC_VECTOR_EXTENSIONS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/gcc_vector_extrinsics_test.c")
 
 if(HAVE_GCC_VECTOR_EXTENSIONS)
-   message("-- Trying GCC Vector Extensions -- works")
-   add_definitions(-DHAVE_GCC_VECTOR_EXTENSIONS)
-   set (FILE_LIST ${FILE_LIST} 
+    message(STATUS "Trying GCC Vector Extensions -- works")
+    add_definitions(-DHAVE_GCC_VECTOR_EXTENSIONS)
+    set (FILE_LIST ${FILE_LIST} 
                kahan_gcc_vector.c
                kahan_gcc_vector8.c
                knuth_gcc_vector.c
                knuth_gcc_vector8.c)
 else()
-   message("-- Trying GCC Vector Extensions -- fails")
+    message(STATUS "Trying GCC Vector Extensions -- fails")
 endif (HAVE_GCC_VECTOR_EXTENSIONS)
 
 
 try_compile(HAVE_QUADMATH "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/quadmath_test.c")
 
 if(HAVE_QUADMATH)
-   message("-- Trying Quad math library -- works")
-   add_definitions(-DHAVE_QUADMATH)
-   set (FILE_LIST ${FILE_LIST} 
+    message(STATUS "Trying Quad math library -- works")
+    add_definitions(-DHAVE_QUADMATH)
+    set (FILE_LIST ${FILE_LIST} 
                do_full_qdsum.c
                do_full_qdsum_wtrunc.c
                do_qdsum.c
                do_qdsum_wtrunc.c)
 else()
-   message("-- Trying Quad math library -- fails")
+    message(STATUS "Trying Quad math library -- fails")
 endif (HAVE_QUADMATH)
 
+#Popping compiler flags off and back to original state
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_SAVE})
+
 add_executable(globalsums ${FILE_LIST})
-
-
 
 if (CMAKE_VECTOR_VERBOSE)
     set(VECTOR_C_FLAGS "${VECTOR_C_FLAGS} ${VECTOR_C_VERBOSE}")
     set(VECTOR_CXX_FLAGS "${VECTOR_CXX_FLAGS} ${VECTOR_CXX_VERBOSE}")
 endif (CMAKE_VECTOR_VERBOSE)
-
-
 
 target_include_directories(globalsums PRIVATE vectorclass)
 set_source_files_properties(globalsums.c PROPERTIES COMPILE_FLAGS ${VECTOR_C_FLAGS})

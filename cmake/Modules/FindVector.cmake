@@ -281,6 +281,7 @@ if(CMAKE_Fortran_COMPILER_LOADED)
                 execute_process(COMMAND pgfortran --version COMMAND grep LLVM COMMAND wc -l OUTPUT_VARIABLE PGI_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
                 if ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
                     set(VECTOR_ARCH_Fortran_FLAGS "${VECTOR_ARCH_Fortran_FLAGS} -Mllvm")
+                endif ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
             endif ("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "18.6")
         endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 

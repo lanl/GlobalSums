@@ -1,4 +1,4 @@
-# Version 0.4 Increment by 0.1 every change
+# Version 0.5 Increment by 0.1 every change
 # Operation tested on
 #    Intel Skylake with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
 #    AMD-Epyc with with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
@@ -68,6 +68,14 @@ if(CMAKE_C_COMPILER_LOADED)
     elseif (CMAKE_C_COMPILER_ID MATCHES "PGI")
         set(VECTOR_ALIASING_C_FLAGS "${VECTOR_ALIASING_C_FLAGS} -alias=ansi")
         set(VECTOR_OPENMP_SIMD_C_FLAGS "${VECTOR_OPENMP_SIMD_C_FLAGS} -Mvect=simd")
+        if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+            if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "18.6")
+                execute_process(COMMAND pgcc --version COMMAND grep LLVM COMMAND wc -l OUTPUT_VARIABLE PGI_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
+                if ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
+                    set(VECTOR_ARCH_C_FLAGS "${VECTOR_ARCH_C_FLAGS} -Mllvm")
+                endif ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
+            endif ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "18.6")
+        endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
         set(VECTOR_NOVEC_C_OPT "${VECTOR_NOVEC_C_OPT} -Mnovect ")
         set(VECTOR_C_VERBOSE "${VECTOR_C_VERBOSE} -Minfo=loop,inline,vect")
@@ -111,9 +119,9 @@ if(CMAKE_C_COMPILER_LOADED)
                      VECTOR_NOVEC_C_OPT
                      VECTOR_VEC_C_OPTS)
 
-    message(STATUS  "Setting Vector C flags to -- ${VECTOR_C_OPTS}")
-    message(STATUS  "Setting Vector C No-Vector flags to -- ${VECTOR_NOVEC_C_FLAGS}")
-    message(STATUS  "Setting Vector C Verbose flags to -- ${VECTOR_C_VERBOSE}")
+    message(STATUS  "Setting Vector C flags to: ${VECTOR_C_FLAGS}")
+    message(STATUS  "Setting Vector C No-Vector flags to: ${VECTOR_NOVEC_C_FLAGS}")
+    message(STATUS  "Setting Vector C Verbose flags to: ${VECTOR_C_VERBOSE}")
 
 endif(CMAKE_C_COMPILER_LOADED)
 
@@ -164,6 +172,14 @@ if(CMAKE_CXX_COMPILER_LOADED)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "PGI")
         set(VECTOR_ALIASING_CXX_FLAGS "${VECTOR_ALIASING_CXX_FLAGS} -alias=ansi")
         set(VECTOR_OPENMP_SIMD_CXX_FLAGS "${VECTOR_OPENMP_SIMD_CXX_FLAGS} -Mvect=simd")
+        if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+            if ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "18.6")
+                execute_process(COMMAND pgc++ --version COMMAND grep LLVM COMMAND wc -l OUTPUT_VARIABLE PGI_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
+                if ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
+                    set(VECTOR_ARCH_CXX_FLAGS "${VECTOR_ARCH_CXX_FLAGS} -Mllvm")
+                endif ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
+            endif ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_GREATER "18.6")
+        endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
         set(VECTOR_NOVEC_CXX_OPT "${VECTOR_NOVEC_CXX_OPT} -Mnovect ")
         set(VECTOR_CXX_VERBOSE "${VECTOR_CXX_VERBOSE} -Minfo=loop,inline,vect")
@@ -207,9 +223,9 @@ if(CMAKE_CXX_COMPILER_LOADED)
                      VECTOR_NOVEC_CXX_OPT
                      VECTOR_VEC_CXX_OPTS)
 
-   message(STATUS  "Setting Vector CXX flags to -- ${VECTOR_CXX_OPTS}")
-   message(STATUS  "Setting Vector CXX No-Vector flags to -- ${VECTOR_NOVEC_CXX_FLAGS}")
-   message(STATUS  "Setting Vector CXX Verbose flags to -- ${VECTOR_CXX_VERBOSE}")
+   message(STATUS  "Setting Vector CXX flags to: ${VECTOR_CXX_FLAGS}")
+   message(STATUS  "Setting Vector CXX No-Vector flags to: ${VECTOR_NOVEC_CXX_FLAGS}")
+   message(STATUS  "Setting Vector CXX Verbose flags to: ${VECTOR_CXX_VERBOSE}")
 
 endif(CMAKE_CXX_COMPILER_LOADED)
 
@@ -260,6 +276,13 @@ if(CMAKE_Fortran_COMPILER_LOADED)
     elseif (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
         set(VECTOR_ALIASING_Fortran_FLAGS "${VECTOR_ALIASING_Fortran_FLAGS} -alias=ansi")
         set(VECTOR_OPENMP_SIMD_Fortran_FLAGS "${VECTOR_OPENMP_SIMD_Fortran_FLAGS} -Mvect=simd")
+        if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+            if ("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "18.6")
+                execute_process(COMMAND pgfortran --version COMMAND grep LLVM COMMAND wc -l OUTPUT_VARIABLE PGI_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
+                if ("${PGI_VERSION_OUTPUT}" STREQUAL "1")
+                    set(VECTOR_ARCH_Fortran_FLAGS "${VECTOR_ARCH_Fortran_FLAGS} -Mllvm")
+            endif ("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "18.6")
+        endif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
         set(VECTOR_NOVEC_Fortran_OPT "${VECTOR_NOVEC_Fortran_OPT} -Mnovect ")
         set(VECTOR_Fortran_VERBOSE "${VECTOR_Fortran_VERBOSE} -Minfo=loop,inline,vect")
@@ -304,8 +327,8 @@ if(CMAKE_Fortran_COMPILER_LOADED)
                      VECTOR_NOVEC_Fortran_OPT
                      VECTOR_VEC_Fortran_OPTS)
 
-    message(STATUS  "Setting Vector Fortran flags to -- ${VECTOR_Fortran_OPTS}")
-    message(STATUS  "Setting Vector Fortran No-Vector flags to -- ${VECTOR_NOVEC_Fortran_FLAGS}")
-    message(STATUS  "Setting Vector Fortran Verbose flags to -- ${VECTOR_Fortran_VERBOSE}")
+    message(STATUS  "Setting Vector Fortran flags to: ${VECTOR_Fortran_FLAGS}")
+    message(STATUS  "Setting Vector Fortran No-Vector flags to: ${VECTOR_NOVEC_Fortran_FLAGS}")
+    message(STATUS  "Setting Vector Fortran Verbose flags to: ${VECTOR_Fortran_VERBOSE}")
 
 endif(CMAKE_Fortran_COMPILER_LOADED)

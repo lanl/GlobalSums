@@ -68,10 +68,12 @@ __float128 do_full_qdsum(__float128* restrict var, long ncells);
 __float128 do_full_qdsum_wtrunc(__float128* restrict var, long ncells, int ndigits);
 #endif
 
+#ifdef _OPENMP
 double do_sum_omp(double* restrict var, long ncells);
 double do_sum_omp_wbittrunc(double* restrict var, long ncells, uint nbits);
 double do_kahan_sum_omp(double* restrict var, long ncells);
 double do_kahan_sum_omp_wbittrunc(double* restrict var, long ncells, int nbits);
+#endif
 
 void cpu_timer_start(struct timespec *tstart_cpu);
 double cpu_timer_stop(struct timespec tstart_cpu);
@@ -544,6 +546,7 @@ int main(int argc, char *argv[])
 
 //******************************************************
 
+#ifdef _OPENMP
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_sum_omp(energy, ncells);
@@ -590,6 +593,7 @@ int main(int argc, char *argv[])
       printf("  accurate sum %-17.16lg sum %-17.16lg diff %10.4lg relative diff %10.4lg runtime %lf",
              test_accurate_sum,test_sum,(test_sum-test_accurate_sum),((test_sum-test_accurate_sum)/test_accurate_sum), cpu_time);
       printf("   OpenMP sum with double double kahan sum accumulator with bit truncation\n");
+#endif
 
 //******************************************************
       free(energy);

@@ -1,4 +1,9 @@
-# Version 0.5 Increment by 0.1 every change
+# Version 0.6 Increment by 0.1 every change
+#
+# Authors:
+#    Bob Robey, Los Alamos National Laboratory, brobey@lanl.gov
+#    Daniel Dunning, Los Alamos, National Laboratory, ddunning@lanl.gov
+#
 # Operation tested on
 #    Intel Skylake with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
 #    AMD-Epyc with with clang/8.0.1 gcc/9.1.0 intel/19.0.4 pgi/18.10
@@ -6,20 +11,37 @@
 #    Power9 with clang/8.0.0 gcc/9.1.0 ibm/xlc-16.1.1.3-xlf-16.1.1.3 pgi/19.3
 #
 #    Main output flags
-#       VECTOR_<LANG>_FLAGS
-#       VECTOR_NOVEC_<LANG>_FLAGS
-#       VECTOR_<LANG>_VERBOSE
+#       VECTOR_<LANG>_FLAGS          -- All flags set plus turning on vectorization
+#       VECTOR_NOVEC_<LANG>_FLAGS    -- All flags set same as vectorization, but with vectorization off
+#       VECTOR_<LANG>_VERBOSE        -- Turn on verbose messages when compiling for vectorization feedback
 #    Component flags
-#       VECTOR_ALIASING_<LANG>_FLAGS
-#       VECTOR_ARCH_<LANG>_FLAGS
-#       VECTOR_FPMODEL_<LANG>_FLAGS
-#       VECTOR_NOVEC_<LANG>_OPT
-#       VECTOR_VEC_<LANG>_OPTS
+#       VECTOR_ALIASING_<LANG>_FLAGS -- Stricter aliasing option to help auto-vectorization
+#       VECTOR_ARCH_<LANG>_FLAGS     -- Set to compile for architecture that it is on
+#       VECTOR_FPMODEL_<LANG>_FLAGS  -- Set so that Kahan sum does not get optimized out (unsafe optimizations)
+#       VECTOR_NOVEC_<LANG>_OPT      -- Turn off vectorization for debugging and performance measurement
+#       VECTOR_VEC_<LANG>_OPTS       -- Turn on vectorization
 #
 #    Main output flags are build from component flags by the following rule
 #       set(VECTOR_BASE_<LANG>_FLAGS "${VECTOR_ALIASING_<LANG>_FLAGS} ${VECTOR_ARCH_<LANG>_FLAGS} ${VECTOR_FPMODEL_<LANG>_FLAGS}")
 #       set(VECTOR_NOVEC_<LANG>_FLAGS "${VECTOR_BASE_<LANG>_FLAGS} ${VECTOR_NOVEC_<LANG>_FLAGS}")
 #       set(VECTOR_<LANG>_FLAGS "${VECTOR_BASE_<LANG>_FLAGS} ${VECTOR_<LANG>_FLAGS} ${VECTOR_OPENMP_SIMD_<LANG>_FLAGS}")
+#
+#    Using in CMakeLists:
+#
+#    These lines setup for turning on verbosity with cmake -DCMAKE_VECTOR_VERBOSE
+#
+#       if (CMAKE_VECTOR_VERBOSE)
+#           set(VECTOR_C_FLAGS "${VECTOR_C_FLAGS} ${VECTOR_C_VERBOSE}")
+#           set(VECTOR_CXX_FLAGS "${VECTOR_CXX_FLAGS} ${VECTOR_CXX_VERBOSE}")
+#       endif (CMAKE_VECTOR_VERBOSE)
+#
+#    Vectorization or vector verbosity can be set for individual files
+#
+#       set_source_files_properties(<target> PROPERTIES COMPILE_FLAGS ${VECTOR_C_FLAGS})
+#
+#    Can be added to compile flags for all files
+#
+#       set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VECTOR_C_FLAGS")
 
 # Set vectorization flags for a few compilers
 if(CMAKE_C_COMPILER_LOADED)
@@ -69,6 +91,11 @@ if(CMAKE_C_COMPILER_LOADED)
         set(VECTOR_ALIASING_C_FLAGS "${VECTOR_ALIASING_C_FLAGS} -alias=ansi")
         set(VECTOR_OPENMP_SIMD_C_FLAGS "${VECTOR_OPENMP_SIMD_C_FLAGS} -Mvect=simd")
         if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+            # PGI is converting over to a LLVM based compiler on x86_64. To enable, add -Mllvm
+            #    and then prepend the llvm pgi compiler path something like below. This is important
+            #    when using OpenMP and also adds OpenMP 4.5 support
+            # module load pgi/18.10
+            # export PATH="/projects/opt/centos7/pgi/linux86-64-llvm/18.10/bin:${PATH}"
             if ("${CMAKE_C_COMPILER_VERSION}" VERSION_GREATER "18.6")
                 execute_process(COMMAND pgcc --version COMMAND grep LLVM COMMAND wc -l OUTPUT_VARIABLE PGI_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
                 if ("${PGI_VERSION_OUTPUT}" STREQUAL "1")

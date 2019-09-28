@@ -384,7 +384,7 @@ int main(int argc, char *argv[])
 //******************************************************
 
 #ifdef HAVE_X86_64_INTRINSICS
-#ifdef HAVE_AVX512
+#if defined(HAVE_AVX512) && ! defined(__amd64__)
       cpu_timer_start(&cpu_timer);
 
       test_sum = do_knuth_sum_intel_v8(energy, ncells);

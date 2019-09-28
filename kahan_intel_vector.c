@@ -4,6 +4,7 @@ static double sum[4] __attribute__ ((aligned (64)));
 
 double do_kahan_sum_v(double* restrict var, long ncells)
 {
+#ifndef __PGI
    double const zero = 0.0;
    __m256d local_sum = _mm256_broadcast_sd((double const*) &zero);
    __m256d local_correction = _mm256_broadcast_sd((double const*) &zero);
@@ -41,5 +42,8 @@ double do_kahan_sum_v(double* restrict var, long ncells)
       local.sum          = new_sum_s;
    }
    double final_sum = local.sum + local.correction;
+#else
+   double final_sum = 0.0;
+#endif
    return(final_sum);
 }
